@@ -12,3 +12,12 @@ void arrCopy(char src[],int srcPos,char dest[],int destPos,int length){
         dest[destPos +i] = src[srcPos + i];
     }
 }
+
+void chartoInt(char *ch,int size){
+    int num;
+    for (int i = 0; i < size; ++i) {
+        num = (int ) *ch;
+        printf("%d.",num);
+        ch++;
+    }
+}
