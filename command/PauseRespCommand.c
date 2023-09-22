@@ -10,20 +10,20 @@ void arrCopy(char src[],int srcPos,char dest[],int destPos,int length);
 
 
 
-struct PauseRespInfo info;
+struct PauseRespInfo pauseRespinfo;
 /**
  *
  * @param data 解码前的数据
  */
-struct PauseRespInfo* decode(char data[]){
+struct PauseRespInfo* pauseDecode(char data[]){
 
-    info.command = data[0];
+    pauseRespinfo.command = data[0];
 
     char seq[4];
     arrCopy(data,1,seq,0,4);
-    info.seq = bytesToInt(seq);
+    pauseRespinfo.seq = bytesToInt(seq);
 
-    info.success = data[5];
+    pauseRespinfo.success = data[5];
 
-    return &info;
+    return &pauseRespinfo;
 }

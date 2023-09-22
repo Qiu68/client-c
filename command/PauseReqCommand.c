@@ -15,7 +15,7 @@ void arrCopy(char src[],int srcPos,char dest[],int destPos,int length);
  * @param command 命令类型
  * @param sequence 命令序列号
  */
-void encode(char data[],int sequence){
+void pauseEncode(char data[],int sequence){
     struct PauseReqInfo info;
     char seqChar[4];
     info.command = PAUSE_REQ;

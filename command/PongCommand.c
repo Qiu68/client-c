@@ -44,6 +44,4 @@ void pongEcode(char data[], int sequence,  long long timestamp,
 
     data[22] = pongInfo.delayChangeLevel;
 
-
-
 }
