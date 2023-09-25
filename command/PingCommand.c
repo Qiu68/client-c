@@ -29,7 +29,7 @@ struct PingInfo* pingDecode(char data[]){
     pingInfo.timestamp = bytesToLong(timestamp);
 
     char rtt[4];
-    arrCopy(data,13,timestamp,0,4);
+    arrCopy(data,13,rtt,0,4);
     pingInfo.rtt = bytesToInt(rtt);
     return &pingInfo;
 }

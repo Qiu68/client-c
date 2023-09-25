@@ -5,26 +5,40 @@
 #include "stdio.h"
 #include <sys/time.h>
 #pragma comment(lib, "wsock32.lib")
-#include <stdio.h>
 #include <pthread.h>
 #include "../../command/CommandType.h"
+#include "../../command/PingCommand.h"
+#include "../../command/ClientInitRespCommand.h"
+
 extern SOCKET sock;
 void *tcpListener(void* args);
 struct timeval getTimeStamp();
+struct PingInfo* pingDecode(char data[]);
+int sendPong(int sequence,long long timestamp,int processTimeMs,
+              int receiveCount,char delayChangeLevel);
+void arrCopy(char src[],int srcPos,char dest[],int destPos,int length);
+struct clientInitRespPacket* clientInitRespDecode(char data[]);
 
-int tcpListenerFlag = 1;
+int tcpListenerFlag = 1; //tcp监听任务flag
+int RTT = 0;
+
+extern pthread_t tcpTask;
+
+//分包最大字节数
+int packageSize = 0;
+//路由器tcp端口
+int tcpPort = 0;
 
 void tcpListenerInit(){
-    printf("111");
-    pthread_t t1;
-    pthread_create(&t1,NULL,tcpListener,NULL);
+    pthread_create(&tcpTask,NULL,tcpListener,NULL);
 }
 
 void *tcpListener(void* args){
-    printf("------tcp监听线程开启------");
+    printf("------tcp监听线程开启------\n");
     char recBuf[1500];
     char rev[1];
     int length;
+    long long nowPingTimestamp,prevPingTimestamp=0l;
     while(tcpListenerFlag)
     {
         //printf("读取消息:");
@@ -41,7 +55,7 @@ void *tcpListener(void* args){
                 readLength = 31;
                 length = recv(sock, recBuf, readLength, 0); //接收服务端发来的消息
                 recBuf[readLength] = '\0';
-                printf("1");
+                printf("------ rev describe resp msg ------\n");
                 fflush(stdout);
                 break;
 
@@ -49,7 +63,7 @@ void *tcpListener(void* args){
                 readLength = 13;
                 length = recv(sock, recBuf, readLength, 0); //接收服务端发来的消息
                 recBuf[readLength] = '\0';
-                printf("2");
+                printf("------ rev start resp msg ------\n");
                 fflush(stdout);
                 break;
 
@@ -57,7 +71,7 @@ void *tcpListener(void* args){
                 readLength = 5;
                 length = recv(sock, recBuf, readLength, 0); //接收服务端发来的消息
                 recBuf[readLength] = '\0';
-                printf("3");
+                printf("------ rev start resp msg ------\n");
                 fflush(stdout);
                 break;
 
@@ -65,28 +79,64 @@ void *tcpListener(void* args){
                 readLength = 5;
                 length = recv(sock, recBuf, readLength, 0); //接收服务端发来的消息
                 recBuf[readLength] = '\0';
-                printf("4");
+                printf("------ rev start nack resp ------\n");
                 fflush(stdout);
                 break;
 
-            case CLIENT_INIT_RESP:
+            case CLIENT_INIT_RESP: {
+                struct ClientInitRespInfo *info;
+                printf("------ rev client init resp ------\n");
+                fflush(stdout);
+
                 readLength = 17;
-                length = recv(sock, recBuf, readLength, 0); //接收服务端发来的消息
-                recBuf[readLength] = '\0';
-                printf("5");
-                fflush(stdout);
-                break;
+                char data[readLength];
+                length = recv(sock, data, readLength, 0); //接收服务端发来的消息
+                data[readLength] = '\0';
+                recBuf[0] = rev[0];
+                arrCopy(data,0,recBuf,1,readLength);
 
-            case PING:
+                info = clientInitRespDecode(recBuf);
+                printf("port = %d",info->packetSize);
+                break;
+            }
+
+            case PING: {
+                char data[16];
+                struct PingInfo *p;
+                data[0] = rev[0];
                 revTime = getTimeStamp();
                 //剩余字节数
                 readLength = 16;
-                length = recv(sock, recBuf, readLength, 0); //接收服务端发来的消息
-                recBuf[readLength] = '\0';
-                printf("6");
+                length = recv(sock, data, readLength, 0); //接收服务端发来的消息
+                recBuf[0] = rev[0];
+                arrCopy(data,0,recBuf,1,readLength);
+//                recBuf[readLength + 1] = '\0';
+                printf("------- rec ping msg ------\n");
                 fflush(stdout);
-                break;
 
+                p = pingDecode(recBuf);
+                prevPingTimestamp = nowPingTimestamp;
+                nowPingTimestamp = p->timestamp;
+                RTT = p->rtt;
+                printf("------ rtt = %d ------ \n",RTT);
+
+                //阻塞一个rtt时间
+                struct timeval time;
+//                printf("111111\n");
+//                fflush(stdout);
+//                while(1){
+//                    time = getTimeStamp();
+//                    if (time.tv_usec < (revTime.tv_usec) + (RTT + 20) * 1000){
+//                        continue;}
+//                    else{
+//                        break;
+//                    }
+//                }
+//                printf("22222\n");
+
+                sendPong(p->sequence,p->timestamp,0,0,'\0');
+                break;
+            }
             default:
                 printf("error");
         }

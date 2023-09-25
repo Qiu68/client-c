@@ -5,7 +5,6 @@
 
 
 #include <stdio.h>
-#include <string.h>
 
 void arrCopy(char src[],int srcPos,char dest[],int destPos,int length){
     for (int i = 0; i < length; ++i) {

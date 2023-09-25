@@ -18,7 +18,7 @@ void pongEcode(char data[], int sequence,  long long timestamp,
                    int processTimeMs,int receiveCount,
                    char delayChangeLevel){
 
-    pongInfo.command = DESCRIBE_REQ;
+    pongInfo.command = PONG;
     pongInfo.sequence = sequence;
     pongInfo.timestamp = timestamp;
     pongInfo.processTimeMs = processTimeMs;
@@ -36,12 +36,12 @@ void pongEcode(char data[], int sequence,  long long timestamp,
 
     char processTimeData[4];
     intToBytes(pongInfo.processTimeMs,processTimeData);
-    arrCopy(timestampData,0,data,13,4);
+    arrCopy(processTimeData,0,data,13,4);
 
     char revCount[4];
     intToBytes(pongInfo.receiveCount,revCount);
     arrCopy(revCount,0,data,17,4);
 
-    data[22] = pongInfo.delayChangeLevel;
+    data[21] = pongInfo.delayChangeLevel;
 
 }

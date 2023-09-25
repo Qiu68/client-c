@@ -9,6 +9,9 @@
 
 struct clientInitRespPacket{
     char type;
+    int seq;
+    char success;
     char clientHost[4];
     int clientPort;
+    int packageSize;
 };
