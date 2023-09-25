@@ -9,6 +9,7 @@
 #include "../../command/CommandType.h"
 #include "../../command/PingCommand.h"
 #include "../../command/ClientInitRespCommand.h"
+#include "../../command/DescribeRespCommand.h"
 
 extern SOCKET sock;
 void *tcpListener(void* args);
@@ -18,6 +19,7 @@ int sendPong(int sequence,long long timestamp,int processTimeMs,
               int receiveCount,char delayChangeLevel);
 void arrCopy(char src[],int srcPos,char dest[],int destPos,int length);
 struct clientInitRespPacket* clientInitRespDecode(char data[]);
+struct ClientInitRespInfo* desRespDecode(char data[]);
 
 int tcpListenerFlag = 1; //tcp监听任务flag
 int RTT = 0;
@@ -28,6 +30,11 @@ extern pthread_t tcpTask;
 int packageSize = 0;
 //路由器tcp端口
 int tcpPort = 0;
+//总帧数
+int fileFrameCount = 0;
+//文件字节数
+long long  fileLength = 0;
+
 
 void tcpListenerInit(){
     pthread_create(&tcpTask,NULL,tcpListener,NULL);
@@ -49,15 +56,25 @@ void *tcpListener(void* args){
         struct timeval nowTime;
         int type = rev[0];
         int readLength;
+
         switch (type) {
 
-            case DESCRIBE_RESP:
+            case DESCRIBE_RESP: {
+                struct DescribeRespCommand *info;
                 readLength = 31;
-                length = recv(sock, recBuf, readLength, 0); //接收服务端发来的消息
-                recBuf[readLength] = '\0';
                 printf("------ rev describe resp msg ------\n");
                 fflush(stdout);
+
+                char data[readLength];
+                recv(sock,data,readLength,0);
+                recBuf[0] = rev[0];
+                arrCopy(data,0, recBuf,1,readLength);
+                info = desRespDecode(recBuf);
+
+                fileLength = info->length;
+                fileFrameCount = info->frameCount;
                 break;
+            }
 
             case START_RESP:
                 readLength = 13;
@@ -65,6 +82,8 @@ void *tcpListener(void* args){
                 recBuf[readLength] = '\0';
                 printf("------ rev start resp msg ------\n");
                 fflush(stdout);
+
+
                 break;
 
             case PAUSE_RESP:
@@ -96,7 +115,7 @@ void *tcpListener(void* args){
                 arrCopy(data,0,recBuf,1,readLength);
 
                 info = clientInitRespDecode(recBuf);
-                printf("port = %d",info->packetSize);
+                printf("packageSize = %d\n",info->packetSize);
                 break;
             }
 

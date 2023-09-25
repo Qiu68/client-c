@@ -28,7 +28,5 @@ void arrCopy(char src[],int srcPos,char dest[],int destPos,int length);
 
     longToBytes(describeReqInfo.resourceId,resChar);
     arrCopy(resChar,0,data,5,8);
-
-
 }
 
