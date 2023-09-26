@@ -18,18 +18,21 @@ struct PingInfo* pingDecode(char data[]);
 int sendPong(int sequence,long long timestamp,int processTimeMs,
               int receiveCount,char delayChangeLevel);
 void arrCopy(char src[],int srcPos,char dest[],int destPos,int length);
-struct clientInitRespPacket* clientInitRespDecode(char data[]);
+struct ClientInitRespInfo* clientInitTcpDecode(char data[]);
 struct ClientInitRespInfo* desRespDecode(char data[]);
+long getLeadTime(struct timeval *start,struct timeval *end);
 
 int tcpListenerFlag = 1; //tcp监听任务flag
 int RTT = 0;
 
 extern pthread_t tcpTask;
+extern int tcpPort;
 
 //分包最大字节数
 int packageSize = 0;
 //路由器tcp端口
 int tcpPort = 0;
+char localHost[4]={'\0'};
 //总帧数
 int fileFrameCount = 0;
 //文件字节数
@@ -114,7 +117,9 @@ void *tcpListener(void* args){
                 recBuf[0] = rev[0];
                 arrCopy(data,0,recBuf,1,readLength);
 
-                info = clientInitRespDecode(recBuf);
+                info = clientInitTcpDecode(recBuf);
+                arrCopy(info->clientHost,0,localHost,0,4);
+                tcpPort = info->clientPort;
                 printf("packageSize = %d\n",info->packetSize);
                 break;
             }
@@ -141,19 +146,18 @@ void *tcpListener(void* args){
 
                 //阻塞一个rtt时间
                 struct timeval time;
-//                printf("111111\n");
-//                fflush(stdout);
-//                while(1){
-//                    time = getTimeStamp();
-//                    if (time.tv_usec < (revTime.tv_usec) + (RTT + 20) * 1000){
-//                        continue;}
-//                    else{
-//                        break;
-//                    }
-//                }
-//                printf("22222\n");
-
-                sendPong(p->sequence,p->timestamp,0,0,'\0');
+                while(1){
+                    time = getTimeStamp();
+                    if (time.tv_usec < (revTime.tv_usec) + (RTT) * 1000){
+                        continue;}
+                    else{
+                        break;
+                    }
+                }
+                time = getTimeStamp();
+                long timestamp = getLeadTime(&revTime,&time);
+                printf("处理耗时=%ld",timestamp);
+                sendPong(p->sequence,p->timestamp,timestamp,0,'\0');
                 break;
             }
             default:

@@ -23,3 +23,10 @@ struct timeval getTimeStamp(){
 long getLeadTime(struct timeval *start,struct timeval *end){
     return (1000000 * ( end->tv_sec - start->tv_sec ) + end->tv_usec - start->tv_usec) / 1000;
 }
+
+
+long long getSystemTimestamp(){
+    struct timeval time;
+    gettimeofday(&time, NULL);
+    return (time.tv_sec) * 1000ll + (time.tv_usec) / 1000;
+}

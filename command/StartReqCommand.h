@@ -9,7 +9,7 @@ struct StartReqInfo{
     char command;
     int sequence;
     long long resourceId;
-    char protocol;
+    char protocol;  // 0->tcp 1->udp
     int receivePort;
     int startFrameIndex;
 };

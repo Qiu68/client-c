@@ -21,9 +21,10 @@ void startReqEcode(char data[], int sequence, long long resId,
     char revPort[4];
     char startIndex[4];
 
-    startReqInfo.command = DESCRIBE_REQ;
+    startReqInfo.command = START_REQ;
     startReqInfo.sequence = sequence;
     startReqInfo.resourceId = resId;
+    startReqInfo.protocol = protocol;
 
     data[0] = startReqInfo.command;
     intToBytes(startReqInfo.sequence,seqChar);
@@ -32,15 +33,15 @@ void startReqEcode(char data[], int sequence, long long resId,
     longToBytes(startReqInfo.resourceId,resChar);
     arrCopy(resChar,0,data,5,8);
 
-    startReqInfo.protocol = data[9];
+      data[13] = startReqInfo.protocol;
 
     startReqInfo.receivePort = receivePort;
     intToBytes(startReqInfo.receivePort,revPort);
-    arrCopy(revPort,0,data,13,4);
+    arrCopy(revPort,0,data,14,4);
 
     startReqInfo.startFrameIndex = startFrameIndex;
     intToBytes(startReqInfo.startFrameIndex,startIndex);
-    arrCopy(startIndex,0,data,17,4);
+    arrCopy(startIndex,0,data,18,4);
 
 
 }

@@ -18,7 +18,7 @@ struct ClientInitRespInfo info;
  *
  * @param data 解码前的数据
  */
-struct ClientInitRespInfo* decode(char data[]){
+struct ClientInitRespInfo* clientInitTcpDecode(char data[]){
 
     info.command = data[0];
 

@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <winsock2.h>
 #include <windows.h>
+
 #pragma comment(lib, "ws2_32.lib")
 #include <errno.h>
 #include<stdlib.h>
@@ -32,6 +33,7 @@ int tcpInit(){
     sockAddr.sin_port = htons(8172);
     int stat = connect(sock, (SOCKADDR*)&sockAddr, sizeof(SOCKADDR));
 
+    //getsockname(sock, &sockAddr, (int *) sizeof(SOCKADDR));
     return stat;
 
 //    //接收服务器传回的数据

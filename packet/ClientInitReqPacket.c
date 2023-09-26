@@ -17,7 +17,7 @@ void arrCopy(char src[],int srcPos,char dest[],int destPos,int length);
 
 void clientInitEcode(char data[], char clientHost[4],int clientPort){
 
-    clientInitReqinfo.type = CLIENT_INIT_REQ;
+    clientInitReqinfo.type = CLIENT_UDP_INIT_REQ;
 
     data[0] = clientInitReqinfo.type;
 

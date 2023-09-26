@@ -9,30 +9,26 @@
 
 struct clientInitRespPacket clientInitRespinfo;
 
-void intToBytes(int num,char ch[]);
+void intToBytes(int num, char ch[]);
+
 int bytesToInt(char ch[]);
-void longToBytes(long long num,char ch[]);
 
-void arrCopy(char src[],int srcPos,char dest[],int destPos,int length);
+void longToBytes(long long num, char ch[]);
 
-struct clientInitRespPacket* clientInitRespDecode(char data[]){
+void arrCopy(char src[], int srcPos, char dest[], int destPos, int length);
+
+struct clientInitRespPacket *clientInitRespDecode(char data[]) {
 
     clientInitRespinfo.type = data[0];
 
-    char seqChar[4];
-    arrCopy(data,1,seqChar,0,4);
-    clientInitRespinfo.seq = bytesToInt(seqChar);
-
-    clientInitRespinfo.success = data[5];
-
-    arrCopy(data,6,clientInitRespinfo.clientHost,0,4);
-
     char portBytes[4];
-    arrCopy(data,10,portBytes,0,4);
+    arrCopy(data, 1, portBytes, 0, 4);
     clientInitRespinfo.clientPort = bytesToInt(portBytes);
 
-    char sizeBytes[4];
-    arrCopy(data,14,sizeBytes,0,4);
-    clientInitRespinfo.packageSize = bytesToInt(sizeBytes);
+    arrCopy(data, 1, clientInitRespinfo.clientHost, 0, 4);
+
+
+
+
     return &clientInitRespinfo;
 }
