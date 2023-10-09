@@ -2,9 +2,12 @@
 // Created by 24546 on 2023/9/22.
 //
 
+#include <WinSock2.h>
+#include <Windows.h>
+//加载lib
+#pragma comment(lib, "ws2_32.lib")
 #include <winsock2.h>
 #include "stdio.h"
-#pragma comment(lib, "wsock32.lib")
 #include "../../command/CommandType.h"
 #include "../../command/PongCommand.h"
 extern SOCKET sock;

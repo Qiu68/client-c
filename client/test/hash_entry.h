@@ -1,8 +1,0 @@
-//
-// Created by 24546 on 2023/9/26.
-//
-
-#ifndef STREAM_CLIENT_HASH_ENTRY_H
-#define STREAM_CLIENT_HASH_ENTRY_H
-
-#endif //STREAM_CLIENT_HASH_ENTRY_H

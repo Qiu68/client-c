@@ -2,19 +2,10 @@
 // Created by 24546 on 2023/9/22.
 //
 
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <winsock2.h>
 #include <windows.h>
-
 #pragma comment(lib, "ws2_32.lib")
-#include <errno.h>
-#include<stdlib.h>
 #include<string.h>
-#include <sys/types.h>
-#include<ws2tcpip.h>
-#include <stdio.h>
-#include <unistd.h>
 
 #define ServerHost "127.0.0.1"
 #define ServerTcpPort  8173

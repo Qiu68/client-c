@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <winsock2.h>
 #include "stdio.h"
-#pragma comment(lib, "wsock32.lib")
+#pragma comment(lib, "ws2_32")
 #include "../command/CommandLenght.h"
 #include "../packet/PacketType.h"
 #include "../packet/PacketLength.h"
@@ -45,7 +45,7 @@ int sendUdpMsg(char msg[]){
 int clientInit(){
     int stat = tcpInit();
     if(stat < 0){
-        printf("连接失败！");
+        printf("连接失败");
         return -1;
     }
 

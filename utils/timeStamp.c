@@ -14,6 +14,12 @@ struct timeval getTimeStamp(){
     return time;
 }
 
+ long long  getTimeStampByUs(){
+    struct timeval time;
+    gettimeofday(&time, NULL);
+    return time.tv_usec;
+}
+
 /**
  * 获取两个时间戳的毫米差
  * @param start

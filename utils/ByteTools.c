@@ -1,7 +1,6 @@
 //
 // Created by 24546 on 2023/9/18.
 //
-#include "stdio.h"
 
 void shortToBytes(short num, char ch[]) {
 
