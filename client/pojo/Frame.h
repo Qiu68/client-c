@@ -7,7 +7,7 @@
 struct packetData{
     int packageIndex;
     int packageLength;
-    char *data;
+    char data[1400];
     struct packetData *next;
 };
 struct lossPacket{

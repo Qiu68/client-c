@@ -8,7 +8,7 @@
 #include <sys/time.h>
 
 FILE  *destFp;
-int test() {
+int writeFileInit() {
     char *destFile = "d://2/test.h264";
 
     destFp = fopen(destFile, "wb");
@@ -19,8 +19,13 @@ int test() {
     return 1;
 }
 
-int writeFile(char *buf,int length){
-    fwrite(buf, 1, length, destFp);
+int writer(long long offset,char *buf,int length){
+    long long seek = fseek(destFp,offset,0);
+    int count = fwrite(buf, 1, length, destFp);
+//    printf("------  length = %d  count = %lld ------\n",length,offset);
+//    fflush(stdout);
+    fflush(destFp);
+    return count;
 }
 
 int closeFile(){

@@ -16,7 +16,7 @@ struct FramePacket{
     int packageIndex;
     int frameLength;
     long long framePosition;
-    char *data;
+    char data[1400];
 
     int dataLength;
 };

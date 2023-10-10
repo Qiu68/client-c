@@ -1,6 +1,7 @@
 //
 // Created by 24546 on 2023/9/22.
 //
+#include <stdio.h>
 #include <stdlib.h>
 #include "FramePacket.h"
 
@@ -54,7 +55,10 @@ struct FramePacket *FramePacketDecode(char data[],int length) {
         framePacketInfo.dataLength = length - 33;
 
         //指向实际数据
-        framePacketInfo.data = &data[33];
+        //framePacketInfo.data = &data[33];
+        //char ch[framePacketInfo.dataLength];
+        arrCopy(data,33,framePacketInfo.data,0,framePacketInfo.dataLength);
+        //printf("%c",framePacketInfo.data[0]);
     }
 
         //其他分包 报头 25 byte
@@ -63,7 +67,10 @@ struct FramePacket *FramePacketDecode(char data[],int length) {
 
         framePacketInfo.dataLength = length - 25;
 
-        framePacketInfo.data = &data[25];
+        //framePacketInfo.data = &data[25];
+        arrCopy(data,25,framePacketInfo.data,0,framePacketInfo.dataLength);
+        //printf("%c",framePacketInfo.data[0]);
+
     }
     return &framePacketInfo;
 }

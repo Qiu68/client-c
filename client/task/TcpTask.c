@@ -81,15 +81,20 @@ void *tcpListener(void *args) {
     int length;
     while (tcpListenerFlag) {
         //printf("读取消息:");
+
         recBuf[0] = '\0';
         length = recv(sock, rev, 1, 0); //接收服务端发来的消息
+
         rev[length] = '\0';
-        struct timeval revTime;
-        struct timeval nowTime;
+        long long  revTime = 0ll;
+        long long nowTime = 0ll;
+        long long processTime = 0ll;
         int type = rev[0];
         int readLength;
 
         switch (type) {
+
+
 
             case DESCRIBE_RESP: {
                 struct DescribeRespCommand *info;
@@ -164,40 +169,31 @@ void *tcpListener(void *args) {
 
                 char data[16];
                 struct PingInfo *p;
-                revTime = getTimeStamp();
+                revTime = getSystemTimestamp();
                 //剩余字节数
                 readLength = 16;
                 length = recv(sock, data, readLength, 0); //接收服务端发来的消息
                 data[readLength] = '\0';
                 recBuf[0] = rev[0];
                 arrCopy(data, 0, recBuf, 1, readLength);
-                printf("------- rec ping msg ------\n");
-                fflush(stdout);
+                //printf("------- rec ping msg ------\n");
+                //fflush(stdout);
 
                 p = pingDecode(recBuf);
                 prevPingTimestamp = nowPingTimestamp;
                 nowPingTimestamp = p->timestamp - startTime;
-                printf("timestamp=%lld -   startTime=%lld = %lld\n",p->timestamp,startTime,p->timestamp-startTime);
+                //printf("timestamp=%lld -   startTime=%lld = %lld\n",p->timestamp,startTime,p->timestamp-startTime);
                 RTT = p->rtt;
-                printf("------ seq=%d   rtt=%d   timestamp=%lld  nonPing=%lld------ \n", p->sequence,RTT,p->timestamp,nowPingTimestamp);
-
+                //printf("------ seq=%d   rtt=%d   timestamp=%lld  nonPing=%lld------ \n", p->sequence,RTT,p->timestamp,nowPingTimestamp);
                 //阻塞一个rtt时间
-                struct timeval time;
                 while (1) {
-                    time = getTimeStamp();
-                    if (time.tv_usec < (revTime.tv_usec) + (RTT) * 1000) {
+                    nowTime = getSystemTimestamp();
+                    if (nowTime < revTime + RTT) {
                         continue;
                     } else {
                         break;
                     }
                 }
-
-//                printf("1111\n");
-
-
-
-
-//                printf("2222");
                 struct Packet *point, *list, *ptr;
                 point = head;
                 int count = 0;
@@ -217,8 +213,9 @@ void *tcpListener(void *args) {
                     }
                     point = point->next;
                 }
-
-                ptr->next = NULL;
+                if (ptr != NULL) {
+                    ptr->next = NULL;
+                }
 
                 //point = NULL;
 
@@ -239,11 +236,10 @@ void *tcpListener(void *args) {
                 //printf("time:%ld\n",(getSystemTimestamp() - start));
                 printf("------ revPacketCount %d------\n",revPacketCount);
 
-                time = getTimeStamp();
-                long timestamp = getLeadTime(&revTime, &time);
-               // printf("------ rev packet count=%d ------\n", revPacketCount);
-                fflush(stdout);
-                sendPong(p->sequence, p->timestamp, timestamp, revPacketCount, '\1');
+                processTime = getSystemTimestamp() - revTime;
+               //printf("------ rev packet count=%d ------\n", revPacketCount);
+                //fflush(stdout);
+                sendPong(p->sequence, p->timestamp, processTime, revPacketCount, '\1');
 
 
                 revPacketCount = 0;
@@ -258,6 +254,7 @@ void *tcpListener(void *args) {
         }
         //printf("%s\n", recBuf);
 //        break;
+
     }
 
 }

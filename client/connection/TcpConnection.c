@@ -20,7 +20,7 @@ int tcpInit(){
     struct sockaddr_in sockAddr;
     memset(&sockAddr, 0, sizeof(sockAddr));  //每个字节都用0填充
     sockAddr.sin_family = PF_INET;
-    sockAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    sockAddr.sin_addr.s_addr = inet_addr(ServerHost);
     sockAddr.sin_port = htons(8172);
     int stat = connect(sock, (SOCKADDR*)&sockAddr, sizeof(SOCKADDR));
 

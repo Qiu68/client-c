@@ -20,6 +20,6 @@ int receiveCount,char delayChangeLevel){
     char data[22];
     pongEcode(data,sequence,timestamp,processTimeMs,receiveCount,delayChangeLevel);
     send(sock,data,22,0);
-    printf("------ send pong msg success ------\n");
+    //printf("------ send pong msg success ------\n");
     return 1;
 }

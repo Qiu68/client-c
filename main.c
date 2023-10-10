@@ -29,6 +29,7 @@ int bytesToInt(char ch[]);
 int main() {
 
     pthread_mutex_init(&packetCountMutex,NULL);
+    pthread_mutex_init(&frameMutex,NULL);
 
     clientInit();
     getDescribe(106ll);
