@@ -22,6 +22,7 @@ extern int udpRoutePort;
 void arrCopy(char src[],int srcPos,char dest[],int destPos,int length);
 int writer(long long offset,char *buf,int length);
 int writeFileInit();
+int addLossPacket(struct Frame *aFrame,int i);
 
 struct Frame *frameCompleteList, *frameCompleteTail = NULL;     // frameCompleteList的节点  不能和 frameList的节点 使用相同的地址
 struct Frame *frameInCompleteList = NULL;
@@ -121,7 +122,7 @@ struct Frame* getInCompleteFrameByFrameIndex(int frameIndex){
 
 struct Frame* getCompleteFrameByFrameIndex(int frameIndex){
     struct Frame *findCompleteFrame = NULL;
-    //pthread_mutex_lock(&frameCompleteMutex);
+    pthread_mutex_lock(&frameCompleteMutex);
     findCompleteFrame = frameCompleteList;
     while(findCompleteFrame != NULL){
         if (findCompleteFrame->frameIndex == frameIndex){
@@ -130,7 +131,7 @@ struct Frame* getCompleteFrameByFrameIndex(int frameIndex){
         }
         findCompleteFrame = findCompleteFrame->next;
     }
-    //thread_mutex_unlock(&frameCompleteMutex);
+    pthread_mutex_unlock(&frameCompleteMutex);
     return NULL;
 }
 
@@ -156,9 +157,12 @@ int addFrameInComplete(struct Frame *frame) {
     return 1;
 }
 
+
+
+
 int deleteFrameInComplete(int frameIndex) {
     struct Frame *aide;
-    //pthread_mutex_lock(&frameInCompleteMutex);
+    pthread_mutex_lock(&frameInCompleteMutex);
     aide = frameInCompleteList;
     //移除首节点
     if (frameInCompleteList->frameIndex == frameIndex) {
@@ -192,12 +196,13 @@ int deleteFrameInComplete(int frameIndex) {
         aide->next = tmp->next->next;
     }
     aide = NULL;
-    //pthread_mutex_unlock(&frameInCompleteMutex);
+    pthread_mutex_unlock(&frameInCompleteMutex);
     return 1;
 }
 int frameInCompleteListSize() {
     // printf("------ 11111 ------\n");
     struct Frame *tmp;
+    pthread_mutex_lock(&frameInCompleteMutex);
     tmp = frameInCompleteList;
     int count = 0;
     while (tmp != NULL) {
@@ -205,6 +210,7 @@ int frameInCompleteListSize() {
         tmp = tmp->next;
     }
     //printf("------ 2222 ------\n");
+    pthread_mutex_unlock(&frameInCompleteMutex);
     return count;
 }
 
@@ -258,6 +264,19 @@ int packetSumLength(struct Frame *frame) {
     }
     return packetSum;
 }
+int maxIndex = 0;
+int getMaxIndex(struct Frame *frame){
+    struct packetData *tmp;
+    tmp = frame->packetNode;
+    maxIndex = 0;
+    while(tmp != NULL){
+        if (tmp->packageIndex > maxIndex){
+            maxIndex = tmp->packageIndex;
+        }
+        tmp = tmp->next;
+    }
+    return maxIndex;
+}
 
 int writeFile(){
     struct Frame *tmp;
@@ -293,6 +312,7 @@ void *task(void *args) {
             Sleep(20);
 
         } else {
+
             struct Frame *tmp;
             //pthread_mutex_lock(&frameMutex);
             tmp = frameList;
@@ -325,6 +345,16 @@ void *task(void *args) {
                     //fflush(stdout);
 
                 } else {
+                    //TODO 判断尾包是否到达
+                    int maxIndex = getMaxIndex(tmp);
+                    if (maxIndex == 0){
+                        printf("------ error! ------\n");
+                    }
+                    if (tmp->packetSum > maxIndex){
+                        for (int i = maxIndex+1; i <=tmp->packetSum ; ++i) {
+                            addLossPacket(tmp,i);
+                        }
+                    }
                      //接收的帧不完整，加入frameInComplete链表
                     addFrameInComplete(tmp);
                     printf("frameIndex %d join frameInComplete list\n", tmp->frameIndex);
@@ -332,6 +362,7 @@ void *task(void *args) {
                     tmp = deleteFrame(tmp);
                     //printf("帧不完整  删除后 size %d\n",frameListSize());
                     //tmp = frameList;
+                    frameList;
                     //pthread_mutex_unlock(&frameMutex);
                     fflush(stdout);
                 }
@@ -354,6 +385,7 @@ void *task(void *args) {
             frameCompleteList = NULL;
             frameCompleteTail = NULL;
             pthread_mutex_unlock(&frameCompleteMutex);
+            Sleep(20);
         }
     }
 }

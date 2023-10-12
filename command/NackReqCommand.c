@@ -50,6 +50,7 @@ void nackReqEncode(char data[], int sequence, int receivePort,long long resId,in
     while(NULL != tmp){
         arrCopy(tmp->data,0,data,21 + (count * 8),8);
         tmp = tmp->next;
+        count++;
     }
 
 }

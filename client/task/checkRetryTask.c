@@ -45,6 +45,8 @@ void nackReqEncode(char data[], int sequence, int receivePort, long long resId, 
 
 int sendNackReq(char *buf,int length);
 
+int addLossPacket(struct Frame *aFrame,int i);
+
 int pauseFlag = 1;
 
 struct lossPacketList *lossPacketHead, *lossPacketTail = NULL;
@@ -124,6 +126,8 @@ void *retry(void *args) {
             }
         }
 
+        printf("------ frameInComplete size = %d ------\n",size);
+        fflush(stdout);
         struct Frame *frameTmp;
         frameTmp = frameInCompleteList;
 
@@ -159,6 +163,7 @@ void *retry(void *args) {
                else if (nowTimestamp - lossPacket->lossTimestamp > ((lossPacket->retryCount * 1000))) {
 
                     addLossPacketAndCast(frameTmp->frameIndex, lossPacket->id);
+                    printf("------ 重传 frameIndex = %d   packageIndex = %d ------\n",frameTmp->frameIndex,lossPacket->id);
                     //重传次数不超过6次 就加1
                     if (lossPacket->retryCount < 6) {
                         lossPacket->retryCount = (lossPacket->retryCount) + 1;
@@ -187,7 +192,6 @@ void *retry(void *args) {
             ++count;
             tmp = tmp->next;
         }
-
         printf("lossPacket count = %d \n",count);
         fflush(stdout);
         if (count != 0) {
@@ -206,6 +210,11 @@ void *retry(void *args) {
             printf("------ 555 ------ \n");
             fflush(stdout);
         }
+        fflush(stdout);
+        //TODO 释放lossPacketHead内存  lossPacketHead = NULL
+        free(lossPacketHead);
+        lossPacketHead = NULL;
+        lossPacketTail = NULL;
 
         printf("------ sleep 1 m ------ \n");
         fflush(stdout);

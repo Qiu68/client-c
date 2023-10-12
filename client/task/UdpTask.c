@@ -95,6 +95,7 @@ void udpListenerInit() {
 }
 
 int addPacket(struct framePacket *package) {
+    //TODO
     //struct packetData *data;
     struct FramePacket *framePacket;
     framePacket = package;
@@ -153,7 +154,7 @@ int addPacketByFrame(struct Frame * aFrame,struct framePacket *package) {
         aFrame->packetNode = data;
     } else {
         struct packetData *ptr;
-        ptr = frame->packetNode;
+        ptr =aFrame->packetNode;
         //检查是否重复 不重复移动到链表尾部
         while (ptr->next != NULL) {
             if (ptr->packageIndex == framePacket->packageIndex) {
@@ -163,12 +164,14 @@ int addPacketByFrame(struct Frame * aFrame,struct framePacket *package) {
             ptr = ptr->next;
         }
         ptr->next = data;
+        ptr = data;
+        ptr->next = NULL;
     }
     return 1;
 }
 
 int addLossPacket(struct Frame *aFrame,int i) {
-    printf("------ frameIndex = %d   packageIndex = %d lossPacket\n",aFrame->frameIndex,i);
+    printf("------ 丢失 frameIndex = %d   packageIndex = %d \n",aFrame->frameIndex,i);
     fflush(stdout);
     struct lossPacket *lossPacket;
 
@@ -191,13 +194,16 @@ int addLossPacket(struct Frame *aFrame,int i) {
             }
             ptr = ptr->next;
         }
+
+        ptr->next = lossPacket;
+        ptr = lossPacket;
         ptr->id = i;
         ptr->next = NULL;
     }
     return 1;
 }
 
-int delLossPacket(struct frame *framePacket, int packageIndex) {
+int delLossPacket(struct Frame *framePacket, int packageIndex) {
     struct Frame *aide;
     aide = framePacket;
     //移除首节点
@@ -519,28 +525,29 @@ void *udpListener(void *args) {
                         lossFrame  = (struct Frame*) malloc(sizeof (struct Frame));
                         lossFrame->frameIndex = framePacket->frameIndex;
                         lossFrame->framePosition = framePacket->framePosition;
+                        lossFrame->packetNode = NULL;
+                        lossFrame->lossPacketNode = NULL;
+                        lossFrame->lossTimestampNode = NULL;
+                        lossFrame->retryCountNode = NULL;
                     }
 
                     lossFrame->frameLength = framePacket->frameLength;
 
 
                     lossFrame->packetSum = packetCount;
-//                    if (framePacket.getPackageIndex() - lossFrame.prevPacketOrder >= 1){
-//                        for (int i = frame.prevPacketOrder+1;i<framePacket.getPackageIndex();i++){
-//                            lossFrame.addLossPacket(i);
-//                        }
-//                        lossFrame.prevPacketOrder = framePacket.getPackageIndex();
-//                    }
-                    //lossFrame.addPacket(framePacket.getData(), framePacket.getPackageIndex());
+//
                     addPacketByFrame(lossFrame,framePacket);
                     pf("------ frameIndex = %d  frameLength = %d  packetLengthSum = %d  packetSum ------ \n",lossFrame->frameIndex,lossFrame->frameLength,
                        packetSumLength(lossFrame),lossFrame->packetSum);
 
 
+                    if (lossFrame->frameLength == packetSumLength(lossFrame)){
+                        deleteFrameInComplete(lossFrame->frameIndex);
+                        lossFrame->lossPacketNode = NULL;
+                    }
 
                     if (NULL != lossFrame->lossPacketNode) {
-//                        QueueUtils.removeIds(lossPacketList, lossPacket.getFrame(), lossPacket.getSequence());
-                        //QueueUtils.removeSetObject(lossFrame.getLossPacketSet(), framePacket.getPackageIndex());
+
                         delLossPacket(lossFrame,framePacket->packageIndex);
 //                            log.info("帧" + framePacket.getFrameIndex() + " 分包" + framePacket.getPackageIndex() + "从frame.lossPacketList移除");
                     }
@@ -561,7 +568,9 @@ void *udpListener(void *args) {
                     lastFrameLengthCount = lastFrameLengthCount + framePacket->dataLength;
                     if (frame->framePosition + lastFrameLengthCount == fileLength) {
                         addFrame(frame);
+                        frameInCompleteList;
                     }
+
                 }
 
                 //pf("------ time =%lld -----\n",(getTimeStampByUs() - s));
