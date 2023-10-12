@@ -30,7 +30,7 @@ long getLeadTime(struct timeval *start,struct timeval *end){
     return (1000000 * ( end->tv_sec - start->tv_sec ) + end->tv_usec - start->tv_usec) / 1000;
 }
 
-
+//返回时间戳 ms
 long long getSystemTimestamp(){
     struct timeval time;
     gettimeofday(&time, NULL);

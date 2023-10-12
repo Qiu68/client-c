@@ -27,4 +27,8 @@ struct framePos{
     long long  framePos;
     struct framePos *next;
 };
+struct lossPacketList {
+    char data[8];
+    struct lossPacketList *next;
+};
 #endif //CLIENT_TEST_CHECKFRAMTASK_H

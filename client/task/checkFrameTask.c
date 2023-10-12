@@ -7,10 +7,17 @@
 #include <windows.h>
 #include <string.h>
 #include "checkFramTask.h"
+#include <stdatomic.h>
 #include "../pojo/Frame.h"
 
+
+atomic_int writeCount;
+int writeCountTmp = 0;
 extern pthread_t frameCheckTask;
 extern pthread_mutex_t frameMutex;
+extern pthread_mutex_t frameInCompleteMutex;
+extern pthread_mutex_t frameCompleteMutex;
+extern int udpRoutePort;
 
 void arrCopy(char src[],int srcPos,char dest[],int destPos,int length);
 int writer(long long offset,char *buf,int length);
@@ -82,6 +89,7 @@ struct Frame *deleteFrame(struct Frame *frame) {
 
 int addFrameComplete(struct Frame *frame) {
     struct Frame *tmp;
+    //pthread_mutex_lock(&frameCompleteMutex);
     tmp = (struct Frame *) malloc(sizeof(struct Frame));
     memcpy(tmp, frame, sizeof(struct Frame));
     if (NULL == frameCompleteList) {
@@ -92,52 +100,65 @@ int addFrameComplete(struct Frame *frame) {
         frameCompleteTail = tmp;
         frameCompleteTail->next = NULL;
     }
+    //pthread_mutex_unlock(&frameCompleteMutex);
     return 1;
 }
 
-struct Frame *findInCompleteFrame = NULL;
-struct Frame *findCompleteFrame = NULL;
+
+
 
 struct Frame* getInCompleteFrameByFrameIndex(int frameIndex){
+    struct Frame *findInCompleteFrame = NULL;
     findInCompleteFrame = frameInCompleteList;
     while(findInCompleteFrame != NULL){
         if (findInCompleteFrame->frameIndex == frameIndex){
             return findInCompleteFrame;
         }
-        frameInCompleteList = frameInCompleteList->next;
+        findInCompleteFrame = findInCompleteFrame->next;
     }
     return NULL;
 }
 
 struct Frame* getCompleteFrameByFrameIndex(int frameIndex){
+    struct Frame *findCompleteFrame = NULL;
+    //pthread_mutex_lock(&frameCompleteMutex);
     findCompleteFrame = frameCompleteList;
     while(findCompleteFrame != NULL){
         if (findCompleteFrame->frameIndex == frameIndex){
+            //pthread_mutex_unlock(&frameCompleteMutex);
             return findCompleteFrame;
         }
-        frameCompleteList = frameCompleteList->next;
+        findCompleteFrame = findCompleteFrame->next;
     }
+    //thread_mutex_unlock(&frameCompleteMutex);
     return NULL;
 }
 
 
 int addFrameInComplete(struct Frame *frame) {
     struct Frame *tmp;
+    pthread_mutex_lock(&frameInCompleteMutex);
     tmp = (struct Frame *) malloc(sizeof(struct Frame));
     memcpy(tmp, frame, sizeof(struct Frame));
     if (NULL == frameInCompleteList) {
         frameInCompleteList = tmp;
         frameInCompleteTail = tmp;
+        frameInCompleteList->next = NULL;
     } else {
         frameInCompleteTail->next = tmp;
         frameInCompleteTail = tmp;
         frameInCompleteTail->next = NULL;
+    }
+    pthread_mutex_unlock(&frameInCompleteMutex);
+    if (frameInCompleteTail->next != NULL){
+        printf("test");
     }
     return 1;
 }
 
 int deleteFrameInComplete(int frameIndex) {
     struct Frame *aide;
+    //pthread_mutex_lock(&frameInCompleteMutex);
     aide = frameInCompleteList;
     //移除首节点
     if (frameInCompleteList->frameIndex == frameIndex) {
@@ -171,7 +192,20 @@ int deleteFrameInComplete(int frameIndex) {
         aide->next = tmp->next->next;
     }
     aide = NULL;
+    //pthread_mutex_unlock(&frameInCompleteMutex);
     return 1;
+}
+int frameInCompleteListSize() {
+    // printf("------ 11111 ------\n");
+    struct Frame *tmp;
+    tmp = frameInCompleteList;
+    int count = 0;
+    while (tmp != NULL) {
+        ++count;
+        tmp = tmp->next;
+    }
+    //printf("------ 2222 ------\n");
+    return count;
 }
 
 int addFrameLength(struct frameLength *frameLength) {
@@ -249,7 +283,7 @@ int writeFile(){
 void *task(void *args) {
 
     while (1) {
-        // 统计frameList >=100帧 开始检查 否则休眠等待
+
 
 //        int size = frameListSize();
 //        printf("frameListSize = %d\n",size);
@@ -313,17 +347,20 @@ void *task(void *args) {
             // 111111111111\n");
             writeFile();
             // 释放frameComplete链表的空间
+            pthread_mutex_unlock(&frameCompleteMutex);
             free(frameCompleteList);
             //free(frameCompleteTail);
 
             frameCompleteList = NULL;
             frameCompleteTail = NULL;
+            pthread_mutex_unlock(&frameCompleteMutex);
         }
     }
 }
 
 
 void initTask() {
+    writeCount = ATOMIC_VAR_INIT(0);
     writeFileInit();
     pthread_create(&frameCheckTask, NULL, task, NULL);
 }

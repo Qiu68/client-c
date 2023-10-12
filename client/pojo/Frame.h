@@ -12,18 +12,20 @@ struct packetData{
 };
 struct lossPacket{
     int id;
+    int retryCount;
+    long long lossTimestamp;
     struct lossPacket *next;
 };
-struct retryCount{
-    int packetIndex;
-    int count;
-    struct retryCount *next;
-};
-struct lossTimestamp{
-    int packetIndex;
-    long long timestamp;
-    struct lossTimestamp *next;
-};
+//struct retryCount{
+//    int packetIndex;
+//    int count;
+//    struct retryCount *next;
+//};
+//struct lossTimestamp{
+//    int packetIndex;
+//    long long timestamp;
+//    struct lossTimestamp *next;
+//};
 struct Frame{
     int frameIndex;
     int frameLength;

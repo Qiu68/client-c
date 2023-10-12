@@ -8,13 +8,25 @@
 
 //统计心跳互斥锁
 pthread_mutex_t  packetCountMutex;
+
 pthread_mutex_t  frameMutex;
+
+pthread_mutex_t frameInCompleteMutex;
+
+pthread_mutex_t frameCompleteMutex;
+
+//udp监听线程
 pthread_t udpTask;
+//tcp监听线程
 pthread_t tcpTask;
+//帧检查线程
 pthread_t frameCheckTask;
+//重传线程
+pthread_t retryTask;
 
 int clientInit();
 void initTask();
+int checkRetryInit();
 void getDescribe(long long resId);
 void startPlay(int frameIndex);
 void setResourceId(long long id);
@@ -30,6 +42,8 @@ int main() {
 
     pthread_mutex_init(&packetCountMutex,NULL);
     pthread_mutex_init(&frameMutex,NULL);
+    pthread_mutex_init(&frameInCompleteMutex,NULL);
+    pthread_mutex_init(&frameCompleteMutex,NULL);
 
     clientInit();
     getDescribe(106ll);
@@ -37,10 +51,12 @@ int main() {
     setResourceId(106ll);
     startPlay(1);
     initTask();
+    checkRetryInit();
 
     pthread_join(tcpTask,NULL);
     pthread_join(udpTask,NULL);
     pthread_join(frameCheckTask,NULL);
+    pthread_join(retryTask,NULL);
 //struct testNode{
 //    int id;
 //    struct testNode *next;

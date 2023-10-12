@@ -168,10 +168,14 @@ int addPacketByFrame(struct Frame * aFrame,struct framePacket *package) {
 }
 
 int addLossPacket(struct Frame *aFrame,int i) {
+    printf("------ frameIndex = %d   packageIndex = %d lossPacket\n",aFrame->frameIndex,i);
+    fflush(stdout);
     struct lossPacket *lossPacket;
 
     lossPacket = (struct lossPacket *) malloc(sizeof(struct lossPacket));
     lossPacket->id = i;
+    lossPacket->retryCount = 0;
+    lossPacket->lossTimestamp = getSystemTimestamp();
     lossPacket->next = NULL;
 
     if (aFrame->lossPacketNode == NULL) {
@@ -197,7 +201,7 @@ int delLossPacket(struct frame *framePacket, int packageIndex) {
     struct Frame *aide;
     aide = framePacket;
     //移除首节点
-    if (aide->lossPacketNode->id == packageIndex) {
+    if (aide->lossPacketNode->id == 0 || aide->lossPacketNode->id == packageIndex) {
     //链表只有一个节点的情况
         if (aide->lossPacketNode->next == NULL) {
             aide->lossPacketNode = NULL;
@@ -249,6 +253,7 @@ int packetProcess(struct FramePacket *package) {
         for (int i = beforePacketOrder + 1; i < nowPacketOrder; ++i) {
             addLossPacket(frame,i);
         }
+        beforePacketOrder = nowPacketOrder;
     }
 
 
@@ -480,7 +485,7 @@ void *udpListener(void *args) {
 
                     //乱序到达的帧
                 else if (framePacket->frameIndex < beforeFrameIndex) {
-                    pf("------ 乱序到达的帧 frameIndex=%d  packageIndex=%d", framePacket->frameIndex,framePacket->packageIndex);
+                    pf("------ 乱序到达的帧 frameIndex=%d  packageIndex=%d\n", framePacket->frameIndex,framePacket->packageIndex);
                     fflush(stdout);
                     //TODO
                     if (NULL != getCompleteFrameByFrameIndex(framePacket->frameIndex)) {

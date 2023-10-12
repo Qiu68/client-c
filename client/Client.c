@@ -34,7 +34,9 @@ extern int tcpPort;
 
 int startFrameIndex;
 int udpRoutePort = 0;
-long long resourceId;
+long long resourceId = 0ll ;
+int maxInCompleteFrameNum = 30;
+int minInCompleteFrameNum = 80;
 
 
 int sendUdpMsg(char msg[]){

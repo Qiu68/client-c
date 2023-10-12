@@ -6,8 +6,12 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <stdatomic.h>
 
 FILE  *destFp;
+extern atomic_int writeCount;
+extern int writeCountTmp;
+
 int writeFileInit() {
     char *destFile = "d://2/test.h264";
 
@@ -25,6 +29,8 @@ int writer(long long offset,char *buf,int length){
 //    printf("------  length = %d  count = %lld ------\n",length,offset);
 //    fflush(stdout);
     fflush(destFp);
+    writeCountTmp++;
+    atomic_store(&writeCount,writeCountTmp);
     return count;
 }
 
