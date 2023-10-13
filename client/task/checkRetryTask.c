@@ -131,8 +131,6 @@ void *retry(void *args) {
         struct Frame *frameTmp;
         frameTmp = frameInCompleteList;
 
-
-
         while (NULL != frameTmp) {
 
 
@@ -145,8 +143,8 @@ void *retry(void *args) {
             lossPacket = frameTmp->lossPacketNode;
 
             if (NULL == lossPacket) {
-                //TODO 将该帧加入检查链表
-               // addFrame(frameTmp);
+                // 将该帧加入检查链表
+                addFrame(frameTmp);
                frameTmp = frameTmp->next;
                 continue;
             }
@@ -160,7 +158,7 @@ void *retry(void *args) {
                     lossPacket->lossTimestamp = getSystemTimestamp();
                 }
                 //符合重传规则 加入重传链表
-               else if (nowTimestamp - lossPacket->lossTimestamp > ((lossPacket->retryCount * 1000))) {
+               else if (nowTimestamp - lossPacket->lossTimestamp > ((lossPacket->retryCount * 400))) {
 
                     addLossPacketAndCast(frameTmp->frameIndex, lossPacket->id);
                     printf("------ 重传 frameIndex = %d   packageIndex = %d ------\n",frameTmp->frameIndex,lossPacket->id);
@@ -172,18 +170,13 @@ void *retry(void *args) {
                     lossPacket->lossTimestamp = getSystemTimestamp();
 
                 }
-                else{
-//                    printf("------ 不符合重传条件 ------\n");
-//                    fflush(stdout);
-                }
+
                 lossPacket = lossPacket->next;
 
             }
             frameTmp = frameTmp->next;
         }
 
-        printf("------ 222 ------ \n");
-        fflush(stdout);
 
         struct lossPacketList *tmp;
         tmp = lossPacketHead;
@@ -207,8 +200,6 @@ void *retry(void *args) {
             free(lossPacketHead);
             lossPacketHead = NULL;
             lossPacketTail = NULL;
-            printf("------ 555 ------ \n");
-            fflush(stdout);
         }
         fflush(stdout);
         //TODO 释放lossPacketHead内存  lossPacketHead = NULL
@@ -218,7 +209,7 @@ void *retry(void *args) {
 
         printf("------ sleep 1 m ------ \n");
         fflush(stdout);
-        sleep(1);
+        Sleep(40);
     }
 
     printf("------- 异常退出 ------ \n");

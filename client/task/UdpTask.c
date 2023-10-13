@@ -23,13 +23,17 @@ struct clientInitRespPacket *clientInitRespDecode(char data[]);
 
 struct FramePacket *FramePacketDecode(char data[], int length);
 
-struct Frame* getCompleteFrameByFrameIndex(int frameIndex);
-struct Frame* getInCompleteFrameByFrameIndex(int frameIndex);
+struct Frame *getCompleteFrameByFrameIndex(int frameIndex);
+
+struct Frame *getInCompleteFrameByFrameIndex(int frameIndex);
+
 int deleteFrameInComplete(int frameIndex);
+
 int packetSumLength(struct Frame *frame);
 
 extern struct sockaddr_in addr;
 extern int udpSockFd;
+extern int frameFlagArr[];
 
 extern pthread_mutex_t packetCountMutex;
 extern pthread_mutex_t frameMutex;
@@ -118,6 +122,7 @@ int addPacket(struct framePacket *package) {
     } else {
         struct packetData *ptr;
         ptr = frame->packetNode;
+
         //检查是否重复 不重复移动到链表尾部
         while (ptr->next != NULL) {
             if (ptr->packageIndex == framePacket->packageIndex) {
@@ -126,13 +131,33 @@ int addPacket(struct framePacket *package) {
             }
             ptr = ptr->next;
         }
+        //将新的分包升序插入包组链表
+        ptr = frame->packetNode;
+        if (data->packageIndex < ptr->packageIndex){
+            data->next = ptr;
+            frame->packetNode = data;
+            return 1;
+        }
+
+        struct packetData *tmp;
+        tmp = ptr->next;
+        while (NULL != tmp) {
+            if (data->packageIndex < tmp->packageIndex) {
+                //TODO 插入指定位置
+                ptr->next = data;
+                data->next = tmp;
+                return 1;
+            }
+            tmp = tmp->next;
+            ptr = ptr->next;
+        }
+
         ptr->next = data;
-        frameList;
     }
     return 1;
 }
 
-int addPacketByFrame(struct Frame * aFrame,struct framePacket *package) {
+int addPacketByFrame(struct Frame *aFrame, struct framePacket *package) {
     //struct packetData *data;
     struct FramePacket *framePacket;
     framePacket = package;
@@ -154,8 +179,8 @@ int addPacketByFrame(struct Frame * aFrame,struct framePacket *package) {
         aFrame->packetNode = data;
     } else {
         struct packetData *ptr;
-        ptr =aFrame->packetNode;
-        //检查是否重复 不重复移动到链表尾部
+        ptr = aFrame->packetNode;
+        //检查是否重复
         while (ptr->next != NULL) {
             if (ptr->packageIndex == framePacket->packageIndex) {
                 //已经存在
@@ -163,15 +188,36 @@ int addPacketByFrame(struct Frame * aFrame,struct framePacket *package) {
             }
             ptr = ptr->next;
         }
+
+
+        //将新的分包升序插入包组链表
+        ptr = aFrame->packetNode;
+        if (data->packageIndex < ptr->packageIndex){
+            data->next = ptr;
+            aFrame->packetNode = data;
+            return 1;
+        }
+
+        struct packetData *tmp;
+        tmp = ptr->next;
+        while (NULL != tmp) {
+            if (data->packageIndex < tmp->packageIndex) {
+                //TODO 插入指定位置
+                ptr->next = data;
+                data->next = tmp;
+                return 1;
+            }
+            tmp = tmp->next;
+            ptr = ptr->next;
+        }
+
         ptr->next = data;
-        ptr = data;
-        ptr->next = NULL;
     }
     return 1;
 }
 
-int addLossPacket(struct Frame *aFrame,int i) {
-    printf("------ 丢失 frameIndex = %d   packageIndex = %d \n",aFrame->frameIndex,i);
+int addLossPacket(struct Frame *aFrame, int i) {
+    printf("------ 丢失 frameIndex = %d   packageIndex = %d \n", aFrame->frameIndex, i);
     fflush(stdout);
     struct lossPacket *lossPacket;
 
@@ -208,7 +254,7 @@ int delLossPacket(struct Frame *framePacket, int packageIndex) {
     aide = framePacket;
     //移除首节点
     if (aide->lossPacketNode->id == 0 || aide->lossPacketNode->id == packageIndex) {
-    //链表只有一个节点的情况
+        //链表只有一个节点的情况
         if (aide->lossPacketNode->next == NULL) {
             aide->lossPacketNode = NULL;
         } else {
@@ -216,20 +262,20 @@ int delLossPacket(struct Frame *framePacket, int packageIndex) {
         }
     }
 
-    //移除尾结点
+        //移除尾结点
     else if (aide->lossPacketNode->next == NULL) {
-    //遍历到ptr节点的上一个节点
+        //遍历到ptr节点的上一个节点
         while (aide->lossPacketNode->id != packageIndex) {
             aide->lossPacketNode = aide->lossPacketNode->next;
         }
-    //断开与ptr的连接
+        //断开与ptr的连接
         aide->lossPacketNode->next = NULL;
     }
 
-    //中间节点
+        //中间节点
     else {
 
-    //遍历到ptr节点的上一个节点
+        //遍历到ptr节点的上一个节点
         while (aide->lossPacketNode->next->id != packageIndex) {
             aide->lossPacketNode = aide->lossPacketNode->next;
         }
@@ -257,7 +303,7 @@ int packetProcess(struct FramePacket *package) {
     if (nowPacketOrder - beforePacketOrder > 1) {
         addPacket(package);
         for (int i = beforePacketOrder + 1; i < nowPacketOrder; ++i) {
-            addLossPacket(frame,i);
+            addLossPacket(frame, i);
         }
         beforePacketOrder = nowPacketOrder;
     }
@@ -265,13 +311,13 @@ int packetProcess(struct FramePacket *package) {
 
     // 乱序的包处理
     if (nowPacketOrder < beforePacketOrder) {
-        printf("------ 乱序到达的包 frameIndex = %d   packageIndex = %d\n",package->frameIndex,package->packageIndex);
+        printf("------ 乱序到达的包 frameIndex = %d   packageIndex = %d\n", package->frameIndex, package->packageIndex);
         fflush(stdout);
-        delLossPacket(frame,nowPacketOrder);
+        delLossPacket(frame, nowPacketOrder);
         addPacket(package);
     }
 
-    if (packetSumLength(frame) == frame->frameLength){
+    if (packetSumLength(frame) == frame->frameLength) {
         addFrame(frame);
     }
 
@@ -460,12 +506,12 @@ void *udpListener(void *args) {
                         aFrame = (struct Frame *) malloc(sizeof(struct Frame));
 
                         aFrame->frameIndex = i;
-                        aFrame->lossPacketNode  = NULL;
+                        aFrame->lossPacketNode = NULL;
                         aFrame->packetNode = NULL;
                         aFrame->next = NULL;
                         aFrame->framePosition = 0ll;
                         aFrame->frameLength = 0;
-                        addLossPacket(aFrame,0);
+                        addLossPacket(aFrame, 0);
                         // 加入不完整帧链表
                         addFrameInComplete(aFrame);
                         beforePacketOrder = nowPacketOrder;
@@ -491,10 +537,11 @@ void *udpListener(void *args) {
 
                     //乱序到达的帧
                 else if (framePacket->frameIndex < beforeFrameIndex) {
-                    pf("------ 乱序到达的帧 frameIndex=%d  packageIndex=%d\n", framePacket->frameIndex,framePacket->packageIndex);
+                    pf("------ 乱序到达的帧 frameIndex=%d  packageIndex=%d\n", framePacket->frameIndex,
+                       framePacket->packageIndex);
                     fflush(stdout);
                     //TODO
-                    if (NULL != getCompleteFrameByFrameIndex(framePacket->frameIndex)) {
+                    if (frameFlagArr[framePacket->frameIndex] == framePacket->frameIndex) {
                         if (NULL != getInCompleteFrameByFrameIndex(framePacket->frameIndex)) {
                             deleteFrameInComplete(framePacket->frameIndex);
                         }
@@ -511,7 +558,7 @@ void *udpListener(void *args) {
 
                     if (NULL == lossFrame) {
                         lossFrame = getCompleteFrameByFrameIndex(framePacket->frameIndex);
-                       // lossFrame = checkFrameQueue.frameMap.get(framePacket.getFrameIndex());
+                        // lossFrame = checkFrameQueue.frameMap.get(framePacket.getFrameIndex());
                     }
 
                     if (NULL == lossFrame) {
@@ -520,9 +567,9 @@ void *udpListener(void *args) {
                     }
 
                     if (NULL == lossFrame) {
-                            pf("------ 乱序到达的帧为空 %d ------\n",framePacket->frameIndex);
+                        pf("------ 乱序到达的帧为空 %d ------\n", framePacket->frameIndex);
 //                            continue;
-                        lossFrame  = (struct Frame*) malloc(sizeof (struct Frame));
+                        lossFrame = (struct Frame *) malloc(sizeof(struct Frame));
                         lossFrame->frameIndex = framePacket->frameIndex;
                         lossFrame->framePosition = framePacket->framePosition;
                         lossFrame->packetNode = NULL;
@@ -536,46 +583,41 @@ void *udpListener(void *args) {
 
                     lossFrame->packetSum = packetCount;
 //
-                    addPacketByFrame(lossFrame,framePacket);
-                    pf("------ frameIndex = %d  frameLength = %d  packetLengthSum = %d  packetSum ------ \n",lossFrame->frameIndex,lossFrame->frameLength,
-                       packetSumLength(lossFrame),lossFrame->packetSum);
+                    addPacketByFrame(lossFrame, framePacket);
+                    pf("------ frameIndex = %d  frameLength = %d  packetLengthSum = %d  packetSum = %d ------ \n",
+                       lossFrame->frameIndex, lossFrame->frameLength,
+                       packetSumLength(lossFrame), lossFrame->packetSum);
 
 
-                    if (lossFrame->frameLength == packetSumLength(lossFrame)){
-                        deleteFrameInComplete(lossFrame->frameIndex);
+                    if (lossFrame->frameLength == packetSumLength(lossFrame)) {
+                        if (NULL != getInCompleteFrameByFrameIndex(lossFrame->frameIndex)) {
+                            deleteFrameInComplete(lossFrame->frameIndex);
+                        }
                         lossFrame->lossPacketNode = NULL;
                     }
 
                     if (NULL != lossFrame->lossPacketNode) {
 
-                        delLossPacket(lossFrame,framePacket->packageIndex);
+                        delLossPacket(lossFrame, framePacket->packageIndex);
 //                            log.info("帧" + framePacket.getFrameIndex() + " 分包" + framePacket.getPackageIndex() + "从frame.lossPacketList移除");
                     }
                     //每一个乱序的帧到达后，都放入检查列表
-                    //checkFrameQueue.addFrame(lossFrame.getFrameIndex(), lossFrame);
                     addFrame(lossFrame);
 
-//                        if (lossFrame.getFrameLength() == lossFrame.getPacketsLength()) {
-////                        log.info(lossFrame.getFrameIndex() + "帧从frameIncompleteMap移除" + " frameLength" + lossFrame.getFrameLength() + " packetLengthSum" + lossFrame.getPacketsLength());
-//                            checkFrameQueue.addFrame(lossFrame.getFrameIndex(), lossFrame);
-//                            frameInCompleteMap.remove(lossFrame.getFrameIndex());
-//                        }
-                }
 
-                //最后一帧
-                if (framePacket->frameIndex == fileFrameCount) {
-//                        System.out.println(checkFrameQueue.completeFrame);
-                    lastFrameLengthCount = lastFrameLengthCount + framePacket->dataLength;
-                    if (frame->framePosition + lastFrameLengthCount == fileLength) {
-                        addFrame(frame);
-                        frameInCompleteList;
+                    //最后一帧
+                    if (framePacket->frameIndex == fileFrameCount) {
+                        lastFrameLengthCount = lastFrameLengthCount + framePacket->dataLength;
+                        if (frame->framePosition + lastFrameLengthCount == fileLength) {
+                            addFrame(frame);
+                        }
+
                     }
 
-                }
-
-                //pf("------ time =%lld -----\n",(getTimeStampByUs() - s));
+                    //pf("------ time =%lld -----\n",(getTimeStampByUs() - s));
 //                fflush(stdout);
-                break;
+                    break;
+                }
             }
         }
     }

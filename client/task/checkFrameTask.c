@@ -33,6 +33,8 @@ struct framePos *framePosList, *framePostTail = NULL;
 struct Frame *frameList = NULL;
 struct Frame *frameTail = NULL;
 
+int frameFlagArr[500000];
+
 int addFrame(struct Frame *frame) {
     pthread_mutex_lock(&frameMutex);
     if (NULL == frameList) {
@@ -291,10 +293,13 @@ int writeFile(){
             tmp->packetNode = tmp->packetNode->next;
         }
         //printf("%c",data[0]);
-       // printf("------ 写入文件 frameIndex = %d  frameLength = %d  framePosition = %lld ------\n",tmp->frameIndex,tmp->frameLength,tmp->framePosition);
-       // fflush(stdout);
+        frameFlagArr[tmp->frameIndex] = tmp->frameIndex;
+        printf("------ 写入文件 frameIndex = %d  frameLength = %d  framePosition = %lld ------\n",tmp->frameIndex,tmp->frameLength,tmp->framePosition);
+        fflush(stdout);
         writer(tmp->framePosition,data,tmp->frameLength);
         tmp = tmp->next;
+
+
     }
     return 1;
 }
@@ -309,7 +314,7 @@ void *task(void *args) {
 
         if (frameList == NULL) {
             //pthread_mutex_unlock(&frameMutex);
-            Sleep(20);
+            Sleep(100);
 
         } else {
 
@@ -322,33 +327,30 @@ void *task(void *args) {
                     printf("test");
                 }
                 //收到的包字节数 == 帧字节数
-                if (tmp->frameLength == packetSum) {
+                if (tmp->frameLength == packetSum && packetSum != 0) {
                     struct Frame *inCompleteTmp;
                     inCompleteTmp = frameInCompleteList;
                     //如果不完整的帧链表存在该帧 则移除
-//                    while (inCompleteTmp != NULL) {
-//                        if (inCompleteTmp->frameIndex == tmp->frameIndex) {
-//                            //TODO 从frameInComplete链表移除
-//                            //deleteFrameInComplete(inCompleteTmp);
-//                            continue;
-//                        }
-//                        inCompleteTmp = inCompleteTmp->next;
-//                    }
-                   // printf("frameIndex %d join frameComplete list\n", tmp->frameIndex);
+                    if (NULL != getInCompleteFrameByFrameIndex(tmp->frameIndex)){
+                        deleteFrameInComplete(tmp->frameIndex);
+                    }
+
+                    //printf("frameIndex %d join frameComplete list\n", tmp->frameIndex);
+                    //fflush(stdout);
                     addFrameComplete(tmp);
 
                     //printf("帧完整  删除前 %d\n",frameListSize());
                     tmp = deleteFrame(tmp);
-                   // pthread_mutex_unlock(&frameMutex);
+                    //pthread_mutex_unlock(&frameMutex);
                    // printf("帧完整  删除后 %d\n",frameListSize());
                    //tmp = frameList;
                     //fflush(stdout);
 
                 } else {
-                    //TODO 判断尾包是否到达
+                    // 判断尾包是否到达
                     int maxIndex = getMaxIndex(tmp);
                     if (maxIndex == 0){
-                        printf("------ error! ------\n");
+                        //printf("------ error! ------\n");
                     }
                     if (tmp->packetSum > maxIndex){
                         for (int i = maxIndex+1; i <=tmp->packetSum ; ++i) {
@@ -373,19 +375,19 @@ void *task(void *args) {
 
                 tmp = tmp->next;
             }
+            //pthread_mutex_unlock(&frameMutex);
 
             //printf("111111111111
             // 111111111111\n");
             writeFile();
             // 释放frameComplete链表的空间
-            pthread_mutex_unlock(&frameCompleteMutex);
+            //pthread_mutex_unlock(&frameCompleteMutex);
             free(frameCompleteList);
             //free(frameCompleteTail);
 
             frameCompleteList = NULL;
             frameCompleteTail = NULL;
-            pthread_mutex_unlock(&frameCompleteMutex);
-            Sleep(20);
+            Sleep(1000);
         }
     }
 }
