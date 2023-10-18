@@ -145,6 +145,8 @@ void *retry(void *args) {
 
             if (NULL == lossPacket) {
                 // 将该帧加入检查链表
+                printf("777 add frame %d\n",frameTmp->frameIndex);
+                fflush(stdout);
                 addFrame(frameTmp);
                frameTmp = frameTmp->next;
                 continue;

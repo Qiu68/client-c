@@ -1,0 +1,12 @@
+//
+// Created by 24546 on 2023/10/16.
+//
+
+#ifndef CLIENT_TEST_BANDWIDTHUSAGE_H
+#define CLIENT_TEST_BANDWIDTHUSAGE_H
+enum BandwidthUsage{
+    UNDERUSING,
+    NORMAL,
+    OVERUSING
+};
+#endif //CLIENT_TEST_BANDWIDTHUSAGE_H

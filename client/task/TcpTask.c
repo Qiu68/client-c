@@ -243,7 +243,7 @@ void *tcpListener(void *args) {
                 processTime = getSystemTimestamp() - revTime;
                //printf("------ rev packet count=%d ------\n", revPacketCount);
                 //fflush(stdout);
-                sendPong(p->sequence, p->timestamp, processTime, revPacketCount, '\0');
+                sendPong(p->sequence, p->timestamp, processTime, revPacketCount, '1' - 48);
 
 
                 revPacketCount = 0;
