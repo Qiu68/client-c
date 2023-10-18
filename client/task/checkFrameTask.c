@@ -173,34 +173,22 @@ int addFrameInComplete(struct Frame *frame) {
         frameInCompleteTail = tmp;
         frameInCompleteList->next = NULL;
     } else {
-        struct Frame *tmp1;
-        //去重
-        tmp1 = frameInCompleteList;
-//        printf("------ 开始遍历 frameInCompleteList ------\n");
-//        fflush(stdout);
-        while (NULL != tmp1) {
-            if (tmp1->frameIndex == frame->frameIndex) {
-//                printf("------ addFrameInComplete 释放锁 ------\n");
-//                fflush(stdout);
-                pthread_mutex_unlock(&frameInCompleteMutex);
+        struct Frame *aide;
+        aide = frameInCompleteList;
+        while (aide->next != NULL){
+            //去除
+            if (aide->next->frameIndex == tmp->frameIndex){
                 return -1;
             }
-//            printf("------ 遍历中 frameInCompleteList ------\n");
-//            fflush(stdout);
-            tmp1 = tmp1->next;
+            aide = aide->next;
         }
-//        printf("------ 遍历结束 frameInCompleteList ------\n");
+        aide->next = tmp;
+    }
+
+//    if (frameInCompleteTail->next != NULL) {
+//        printf("test frameInCompleteTail->next != null\n");
 //        fflush(stdout);
-
-        frameInCompleteTail->next = tmp;
-        frameInCompleteTail = tmp;
-        frameInCompleteTail->next = NULL;
-    }
-
-    if (frameInCompleteTail->next != NULL) {
-        printf("test frameInCompleteTail->next != null\n");
-        fflush(stdout);
-    }
+//    }
     pthread_mutex_unlock(&frameInCompleteMutex);
 //    printf("------ addFrameInComplete 释放锁 ------\n");
 //    fflush(stdout);
@@ -265,6 +253,7 @@ int frameInCompleteListSize() {
     tmp = frameInCompleteList;
     int count = 0;
     while (tmp != NULL) {
+        printf("frameInComplete frameIndex = %d\n",tmp->frameIndex);
         ++count;
         tmp = tmp->next;
     }
@@ -444,10 +433,11 @@ void *task(void *args) {
                     //printf("------ check addFrameComplete 111 ------\n");
 
                     printf("帧不完整  添加前 frameInComplete size %d\n",frameInCompleteListSize());
-                    fflush(stdout);
-                    addFrameInComplete(tmp);
-                    printf("帧不完整  添加后 frameInComplete size %d\n",frameInCompleteListSize());
-                    fflush(stdout);
+//                    fflush(stdout);
+                    int i = 0;
+                    i = addFrameInComplete(tmp);
+                    printf("帧不完整  添加后 frameInComplete size %d result= %d\n",frameInCompleteListSize(),i);
+//                    fflush(stdout);
 //                    printf("------ check addFrameComplete 222 ------\n");
 //                    fflush(stdout);
                     printf("frameIndex %d join frameInComplete list\n", tmp->frameIndex);
