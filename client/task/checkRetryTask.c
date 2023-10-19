@@ -21,6 +21,7 @@ extern struct Frame *frameInCompleteList;
 extern int RTT;
 extern int udpRoutePort;
 extern long long resourceId;
+extern int frameFlagArr[500000];
 
 void *retry(void *args);
 
@@ -144,12 +145,12 @@ void *retry(void *args) {
             lossPacket = frameTmp->lossPacketNode;
 
             if (NULL == lossPacket) {
-                // 将该帧加入检查链表
-                printf("777 add frame %d\n",frameTmp->frameIndex);
-                fflush(stdout);
-                addFrame(frameTmp);
-               frameTmp = frameTmp->next;
-                continue;
+                    // 将该帧加入检查链表
+                    printf("777 add frame %d\n", frameTmp->frameIndex);
+                    fflush(stdout);
+                    addFrame(frameTmp);
+                    frameTmp = frameTmp->next;
+                    continue;
             }
 
             while (NULL != lossPacket) {
