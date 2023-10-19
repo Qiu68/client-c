@@ -2,9 +2,11 @@
 // Created by 24546 on 2023/9/25.
 //
 #include "stdio.h"
+#include "../../log/log.h"
 #include <pthread.h>
 #include <winsock2.h>
 #include <math.h>
+
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -235,7 +237,7 @@ int addPacketByFrame(struct Frame *aFrame, struct framePacket *package) {
 }
 
 int addLossPacket(struct Frame *aFrame, int i) {
-    printf("------ 丢失 frameIndex = %d   packageIndex = %d \n", aFrame->frameIndex, i);
+    log_info("------ 丢失 frameIndex = %d   packageIndex = %d \n", aFrame->frameIndex, i);
     fflush(stdout);
     struct lossPacket *lossPacket;
 
@@ -350,8 +352,7 @@ void *udpListener(void *args) {
 
     while (udpListenerFlag) {
 
-        printf("udp 111\n");
-        fflush(stdout);
+//
         socklen_t len = sizeof(addr);
         int length = recvfrom(udpSockFd, &buf, sizeof(buf), 0, (struct sockaddr *) &addr, &len);
         //printf("udp 222");
@@ -449,7 +450,7 @@ void *udpListener(void *args) {
                         }
                         point = point->next;
                     }
-                    printf("------ 清理%d个数据 ------\n", count);
+                    log_info("------ 清理%d个数据 ------\n", count);
                     clearTime = 0;
                 }
 
@@ -483,7 +484,7 @@ void *udpListener(void *args) {
                 int packetCount = (framePacket->frameLength + 8) % (packageSize - 25)
                                   == 0 ? (framePacket->frameLength + 8) / (packageSize - 25)
                                        : ((framePacket->frameLength + 8) / (packageSize - 25)) + 1;
-                pf("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  packetCount = %d  ------\n",
+                log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  packetCount = %d  ------\n",
                    framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength, packetCount);
                 fflush(stdout);
 
@@ -508,8 +509,8 @@ void *udpListener(void *args) {
                     if (frame != NULL) {
                         // 加入检查队列
                         //pthread_mutex_lock(&frameMutex);
-                        printf("2222 add frame\n",frame->frameIndex);
-                        fflush(stdout);
+//                        printf("2222 add frame\n",frame->frameIndex);
+//                        fflush(stdout);
                         addFrame(frame);
                         //int count = frameListSize();
                         //printf("frame size = %d\n",count);
@@ -539,8 +540,8 @@ void *udpListener(void *args) {
 
                     if (frame != NULL) {
                         // 加入检查链表
-                        printf("3333 add frame %d\n",frame->frameIndex);
-                        fflush(stdout);
+//                        printf("3333 add frame %d\n",frame->frameIndex);
+//                        fflush(stdout);
                         addFrame(frame);
                     }
 
@@ -561,8 +562,8 @@ void *udpListener(void *args) {
                         // 加入帧列表
                         //addFrameInComplete(aFrame);
                         addFrame(aFrame);
-                        printf("4444 add frame %d",aFrame->frameIndex);
-                        fflush(stdout);
+//                        printf("4444 add frame %d",aFrame->frameIndex);
+//                        fflush(stdout);
                         beforePacketOrder = nowPacketOrder;
                     }
 
@@ -586,22 +587,22 @@ void *udpListener(void *args) {
 
                     //乱序到达的帧
                 else if (framePacket->frameIndex < beforeFrameIndex) {
-                    pf("------ 乱序到达的帧 frameIndex=%d  packageIndex=%d\n", framePacket->frameIndex,
+                    log_info("------ 乱序到达的帧 frameIndex=%d  packageIndex=%d\n", framePacket->frameIndex,
                        framePacket->packageIndex);
                     fflush(stdout);
                     //TODO
                     if (frameFlagArr[framePacket->frameIndex] == framePacket->frameIndex) {
-                        printf("------ udp getInCompleteFrameByFrameIndex 111 ------\n");
-                        fflush(stdout);
+//                        printf("------ udp getInCompleteFrameByFrameIndex 111 ------\n");
+//                        fflush(stdout);
                         struct Frame *s =  getInCompleteFrameByFrameIndex(framePacket->frameIndex);
-                        printf("------ udp getInCompleteFrameByFrameIndex 222 ------\n");
-                        fflush(stdout);
+//                        printf("------ udp getInCompleteFrameByFrameIndex 222 ------\n");
+//                        fflush(stdout);
                         if (NULL != s) {
-                            printf("------ udp deleteFrameInComplete 333 ------\n");
-                            fflush(stdout);
+//                            printf("------ udp deleteFrameInComplete 333 ------\n");
+//                            fflush(stdout);
                             deleteFrameInComplete(framePacket->frameIndex);
-                            printf("------ udp deleteFrameInComplete 444 ------\n");
-                            fflush(stdout);
+//                            printf("------ udp deleteFrameInComplete 444 ------\n");
+//                            fflush(stdout);
                         }
                         //                            log.info(framePacket.getFrameIndex() + "已经写入文件");
                         continue;
@@ -610,34 +611,34 @@ void *udpListener(void *args) {
 
                     //Map<Integer, Frame> frameInCompleteMap = checkFrameQueue.getFrameInCompleteMap();
 
-                    printf("------ udp getInCompleteFrameByFrameIndex 555 ------\n");
-                    fflush(stdout);
+//                    printf("------ udp getInCompleteFrameByFrameIndex 555 ------\n");
+//                    fflush(stdout);
                     struct Frame *lossFrame = getInCompleteFrameByFrameIndex(framePacket->frameIndex);
-                    printf("------ udp getInCompleteFrameByFrameIndex 666 ------\n");
-                    fflush(stdout);
+//                    printf("------ udp getInCompleteFrameByFrameIndex 666 ------\n");
+//                    fflush(stdout);
                     //Frame lossFrame = frameInCompleteMap.get(framePacket.getFrameIndex());
 
 
                     if (NULL == lossFrame) {
-                        printf("------ udp getInCompleteFrameByFrameIndex 777 ------\n");
-                        fflush(stdout);
+//                        printf("------ udp getInCompleteFrameByFrameIndex 777 ------\n");
+//                        fflush(stdout);
                         lossFrame = getCompleteFrameByFrameIndex(framePacket->frameIndex);
-                        printf("------ udp getInCompleteFrameByFrameIndex 888 ------\n");
-                        fflush(stdout);
+//                        printf("------ udp getInCompleteFrameByFrameIndex 888 ------\n");
+//                        fflush(stdout);
                         // lossFrame = checkFrameQueue.frameMap.get(framePacket.getFrameIndex());
                     }
 
                     if (NULL == lossFrame) {
-                        printf("------ udp getInCompleteFrameByFrameIndex  999------\n");
-                        fflush(stdout);
+//                        printf("------ udp getInCompleteFrameByFrameIndex  999------\n");
+//                        fflush(stdout);
                         lossFrame = getInCompleteFrameByFrameIndex(framePacket->frameIndex);
-                        printf("------ udp getInCompleteFrameByFrameIndex   101010------\n");
-                        fflush(stdout);
+//                        printf("------ udp getInCompleteFrameByFrameIndex   101010------\n");
+//                        fflush(stdout);
                         //                        lossFrame = frameInCompleteMap.get(framePacket.getFrameIndex());
                     }
 
                     if (NULL == lossFrame) {
-                        pf("------ 乱序到达的帧为空 %d ------\n", framePacket->frameIndex);
+                        log_info("------ 乱序到达的帧为空 %d ------\n", framePacket->frameIndex);
                         //                            continue;
                         lossFrame = (struct Frame *) malloc(sizeof(struct Frame));
                         lossFrame->frameIndex = framePacket->frameIndex;
@@ -655,7 +656,7 @@ void *udpListener(void *args) {
                     lossFrame->packetSum = packetCount;
                     //
                     addPacketByFrame(lossFrame, framePacket);
-                    pf("------ frameIndex = %d  frameLength = %d  packetLengthSum = %d  packetSum = %d ------ \n",
+                    log_info("------ frameIndex = %d  frameLength = %d  packetLengthSum = %d  packetSum = %d ------ \n",
                        lossFrame->frameIndex, lossFrame->frameLength,
                        packetSumLength(lossFrame), lossFrame->packetSum);
 
@@ -666,8 +667,8 @@ void *udpListener(void *args) {
                         //                            log.info("帧" + framePacket.getFrameIndex() + " 分包" + framePacket.getPackageIndex() + "从frame.lossPacketList移除");
                     }
                     //每一个乱序的帧到达后，都放入检查列表
-                    printf("555 add frame %d",lossFrame->frameIndex);
-                    fflush(stdout);
+//                    printf("555 add frame %d",lossFrame->frameIndex);
+//                    fflush(stdout);
                     addFrame(lossFrame);
 
 //                    if (lossFrame->frameLength == packetSumLength(lossFrame)) {
@@ -712,8 +713,8 @@ void *udpListener(void *args) {
             }
 
         }
-        printf("udp 222\n");
-        fflush(stdout);
+//        printf("udp 222\n");
+//        fflush(stdout);
     }
 }
 

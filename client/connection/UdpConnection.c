@@ -4,8 +4,8 @@
 #include <winsock2.h>
 #include <windows.h>
 #pragma comment(lib, "ws2_32.lib")
-#define ServerHost  "47.103.69.132"
-//#define ServerHost "127.0.0.1"
+//#define ServerHost  "47.103.69.132"
+#define ServerHost "127.0.0.1"
 #define ServerTcpPort  8173
 
 struct sockaddr_in addr;
