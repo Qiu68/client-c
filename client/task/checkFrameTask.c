@@ -147,7 +147,7 @@ struct Frame *getCompleteFrameByFrameIndex(int frameIndex) {
     findCompleteFrame = frameCompleteList;
     while (findCompleteFrame != NULL) {
         if (findCompleteFrame->frameIndex == frameIndex) {
-            //pthread_mutex_unlock(&frameCompleteMutex);
+            pthread_mutex_unlock(&frameCompleteMutex);
             return findCompleteFrame;
         }
         findCompleteFrame = findCompleteFrame->next;
@@ -205,6 +205,7 @@ int deleteFrameInComplete(int frameIndex) {
 //    printf("------ deleteFrameInComplete  获取锁成功 ------ \n");
 //    fflush(stdout);
     if (frameInCompleteList == NULL) {
+        pthread_mutex_unlock(&frameInCompleteMutex);
         return -1;
     }
     aide = frameInCompleteList;
@@ -216,34 +217,53 @@ int deleteFrameInComplete(int frameIndex) {
         } else {
             frameInCompleteList = frameInCompleteList->next;
         }
+        pthread_mutex_unlock(&frameInCompleteMutex);
+        return 1;
     }
 
-        //移除尾结点
-    else if (aide->next == NULL) {
-        //遍历到ptr节点的上一个节点
-        while (aide->next->frameIndex != frameIndex) {
-            aide = aide->next;
+//        //移除尾结点
+//    else if (aide->next == NULL) {
+//        //遍历到ptr节点的上一个节点
+//        while (aide->next->frameIndex != frameIndex) {
+//            aide = aide->next;
+//        }
+//        //断开与ptr的连接
+//        aide->next = NULL;
+//    }
+//
+//        //中间节点
+//    else {
+//
+//        //遍历到ptr节点的上一个节点
+//        while (aide->next->frameIndex != frameIndex) {
+//            aide = aide->next;
+//        }
+//        struct Frame *tmp;
+//        tmp = aide;
+//        aide->next = tmp->next->next;
+//    }
+//    aide = NULL;
+//    pthread_mutex_unlock(&frameInCompleteMutex);
+////    printf("------ deleteFrameInComplete  释放锁 ------ \n");
+////    fflush(stdout);
+//    return 1;
+
+    struct Frame *prev = frameInCompleteList;
+    struct Frame *curr = prev->next;
+    while(curr != NULL){
+        if (curr->frameIndex == frameIndex){
+            prev->next = curr->next;
+            break;
         }
-        //断开与ptr的连接
-        aide->next = NULL;
+        prev = prev->next;
+        curr = curr->next;
     }
 
-        //中间节点
-    else {
-
-        //遍历到ptr节点的上一个节点
-        while (aide->next->frameIndex != frameIndex) {
-            aide = aide->next;
-        }
-        struct Frame *tmp;
-        tmp = aide;
-        aide->next = tmp->next->next;
-    }
-    aide = NULL;
     pthread_mutex_unlock(&frameInCompleteMutex);
 //    printf("------ deleteFrameInComplete  释放锁 ------ \n");
 //    fflush(stdout);
     return 1;
+
 }
 
 int frameInCompleteListSize() {
