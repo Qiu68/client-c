@@ -106,8 +106,8 @@ struct Frame *deleteFrame(struct Frame *frame) {
 }
 
 int addFrameComplete(struct Frame *frame) {
-    printf("------ addFrameComplete frameIndex = %d ------\n",frame->frameIndex);
-    fflush(stdout);
+//    printf("------ addFrameComplete frameIndex = %d ------\n",frame->frameIndex);
+//    fflush(stdout);
     struct Frame *tmp;
     //pthread_mutex_lock(&frameCompleteMutex);
     tmp = (struct Frame *) malloc(sizeof(struct Frame));
@@ -127,12 +127,8 @@ int addFrameComplete(struct Frame *frame) {
 
 
 struct Frame *getInCompleteFrameByFrameIndex(int frameIndex) {
-//    printf("------ getInCompleteFrameByFrameIndex 获取锁 ------\n");
-//    fflush(stdout);
     struct Frame *findInCompleteFrame = NULL;
     pthread_mutex_lock(&frameInCompleteMutex);
-//    printf("------ getInCompleteFrameByFrameIndex 获取锁成功 ------\n");
-//    fflush(stdout);
     findInCompleteFrame = frameInCompleteList;
     while (findInCompleteFrame != NULL) {
         if (findInCompleteFrame->frameIndex == frameIndex) {
@@ -142,8 +138,6 @@ struct Frame *getInCompleteFrameByFrameIndex(int frameIndex) {
         findInCompleteFrame = findInCompleteFrame->next;
     }
     pthread_mutex_unlock(&frameInCompleteMutex);
-//    printf("------ getInCompleteFrameByFrameIndex   释放锁------\n");
-//    fflush(stdout);
     return NULL;
 }
 
@@ -166,16 +160,10 @@ struct Frame *getCompleteFrameByFrameIndex(int frameIndex) {
 int addFrameInComplete(struct Frame *frame) {
 
 
-//    if(frameFlagArr[frame->frameIndex] = frame->frameIndex){
-//        printf("------ frameIndex %d 已写入文件 ------\n");
-//        fflush(stdout);
-//        return -1;
-//    }
-
 //    printf("------ addFrameInComplete 获取锁 ------\n");
 //    fflush(stdout);
     struct Frame *tmp;
-//    pthread_mutex_lock(&frameInCompleteMutex);
+    pthread_mutex_lock(&frameInCompleteMutex);
 //    printf("------ addFrameInComplete 获取锁成功 ------\n");
     fflush(stdout);
     tmp = (struct Frame *) malloc(sizeof(struct Frame));
@@ -201,10 +189,7 @@ int addFrameInComplete(struct Frame *frame) {
         aide->next = tmp;
     }
 
-//    if (frameInCompleteTail->next != NULL) {
-//        printf("test frameInCompleteTail->next != null\n");
-//        fflush(stdout);
-//    }
+
     pthread_mutex_unlock(&frameInCompleteMutex);
 //    printf("------ addFrameInComplete 释放锁 ------\n");
 //    fflush(stdout);
@@ -269,7 +254,7 @@ int frameInCompleteListSize() {
     tmp = frameInCompleteList;
     int count = 0;
     while (tmp != NULL) {
-        printf("frameInComplete frameIndex = %d\n", tmp->frameIndex);
+        //printf("frameInComplete frameIndex = %d\n", tmp->frameIndex);
         ++count;
         tmp = tmp->next;
     }

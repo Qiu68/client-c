@@ -18,6 +18,7 @@
 #include "../../command/ClientInitRespCommand.h"
 #include "../../command/DescribeRespCommand.h"
 #include "../pojo/Packet.h"
+#include "../../log/log.h"
 
 extern int sock;
 
@@ -78,7 +79,7 @@ void tcpListenerInit() {
 }
 
 void *tcpListener(void *args) {
-    printf("------tcp监听线程开启------\n");
+    log_info("------tcp监听线程开启------\n");
     char recBuf[1500];
     char rev[1];
     int length;
@@ -102,8 +103,7 @@ void *tcpListener(void *args) {
             case DESCRIBE_RESP: {
                 struct DescribeRespCommand *info;
                 readLength = 31;
-                printf("------ rev describe resp msg ------\n");
-                fflush(stdout);
+                log_info("------ rev describe resp msg ------\n");
 
                 char data[readLength];
                 recv(sock, data, readLength, 0);
@@ -126,9 +126,8 @@ void *tcpListener(void *args) {
                 arrCopy(data, 0, recBuf, 1, readLength);
                 info = startRespDecode(recBuf);
                 startTime = info->time;
-                printf("startTime=%lld\n",startTime);
-                printf("------ rev start resp msg ------\n");
-                fflush(stdout);
+                log_info("startTime=%lld\n",startTime);
+                log_info("------ rev start resp msg ------\n");
 
                 break;}
 
@@ -136,22 +135,19 @@ void *tcpListener(void *args) {
                 readLength = 5;
                 length = recv(sock, recBuf, readLength, 0); //接收服务端发来的消息
                 recBuf[readLength] = '\0';
-                printf("------ rev start resp msg ------\n");
-                fflush(stdout);
+                log_info("------ rev start resp msg ------\n");
                 break;
 
             case NACK_RESP:
                 readLength = 5;
                 length = recv(sock, recBuf, readLength, 0); //接收服务端发来的消息
                 recBuf[readLength] = '\0';
-                printf("------ rev start nack resp ------\n");
-                fflush(stdout);
+                log_info("------ rev start nack resp ------\n");
                 break;
 
             case CLIENT_INIT_RESP: {
                 struct ClientInitRespInfo *info;
-                printf("------ rev client init resp ------\n");
-                fflush(stdout);
+                log_info("------ rev client init resp ------\n");
 
                 readLength = 17;
                 char data[readLength];
@@ -164,7 +160,7 @@ void *tcpListener(void *args) {
                 arrCopy(info->clientHost, 0, localHost, 0, 4);
                 tcpPort = info->clientPort;
                 packageSize = info->packetSize;
-                printf("packageSize = %d\n", info->packetSize);
+                log_info("packageSize = %d\n", info->packetSize);
                 break;
             }
 
@@ -187,8 +183,7 @@ void *tcpListener(void *args) {
                 nowPingTimestamp = p->timestamp - startTime;
                 //printf("timestamp=%lld -   startTime=%lld = %lld\n",p->timestamp,startTime,p->timestamp-startTime);
                 RTT = p->rtt;
-                printf("------ seq=%d   rtt=%d   timestamp=%lld  nonPing=%lld------ \n", p->sequence,RTT,p->timestamp,nowPingTimestamp);
-                fflush(stdout);
+                log_info("------ seq=%d   rtt=%d   timestamp=%lld  nonPing=%lld------ \n", p->sequence,RTT,p->timestamp,nowPingTimestamp);
                 //阻塞一个rtt时间
                 while (1) {
                     nowTime = getSystemTimestamp();
@@ -238,7 +233,7 @@ void *tcpListener(void *args) {
                     aidePoint = aidePoint->next;
                 }
                 //printf("time:%ld\n",(getSystemTimestamp() - start));
-                printf("------ revPacketCount %d------\n",revPacketCount);
+                log_info("------ revPacketCount %d------\n",revPacketCount);
 
                 processTime = getSystemTimestamp() - revTime;
                //printf("------ rev packet count=%d ------\n", revPacketCount);
