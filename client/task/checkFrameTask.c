@@ -50,6 +50,7 @@ int addFrame(struct Frame *frame) {
     if (NULL == frameList) {
         frameList = frame;
         frameTail = frame;
+        frameList->next = NULL;
     } else {
         frameTail->next = frame;
         frameTail = frame;

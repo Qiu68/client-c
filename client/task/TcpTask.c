@@ -4,12 +4,13 @@
 #include <sys/types.h>
 #include <winsock2.h>
 #include <windows.h>
+
 #pragma comment(lib, "ws2_32.lib")
+
 #include<string.h>
 #include <pthread.h>
 #include "stdio.h"
 #include <sys/time.h>
-
 
 
 #include "../../command/StartRespCommand.h"
@@ -19,6 +20,8 @@
 #include "../../command/DescribeRespCommand.h"
 #include "../pojo/Packet.h"
 #include "../../log/log.h"
+#include "../pojo/PacketGroup.h"
+#include "../../trendline/PacketGroupDelay.h"
 
 extern int sock;
 
@@ -35,19 +38,28 @@ int sendPong(int sequence, long long timestamp, int processTimeMs,
 
 void arrCopy(char src[], int srcPos, char dest[], int destPos, int length);
 
-struct Packet * removeNode(struct Packet *head,struct Packet *ptr);
+struct Packet *removeNode(struct Packet *head, struct Packet *ptr);
 
 struct ClientInitRespInfo *clientInitTcpDecode(char data[]);
 
 struct ClientInitRespInfo *desRespDecode(char data[]);
 
-struct StartRespInfo* startRespDecode(char data[]);
+struct StartRespInfo *startRespDecode(char data[]);
 
 long getLeadTime(struct timeval *start, struct timeval *end);
 
 long long getSystemTimestamp();
 
-struct Packet *removeNode(struct Packet *head, struct Packet *ptr);
+
+int delPacketGroup(int groupIndex);
+
+int addPacketGroupDelay(struct PacketGroupDelay *packetGroup);
+
+char calculate(struct PacketGroupDelay *groupDelays);
+
+extern struct PacketGroup *packetGroupList;
+extern struct PacketGroupDelay *groupDelayList;
+
 
 
 int tcpListenerFlag = 1; //tcp监听任务flag
@@ -57,6 +69,7 @@ int RTT = 0;
 extern pthread_t tcpTask;
 extern int tcpPort;
 extern struct Packet *head;
+
 
 //分包最大字节数
 int packageSize = 0;
@@ -90,14 +103,13 @@ void *tcpListener(void *args) {
         length = recv(sock, rev, 1, 0); //接收服务端发来的消息
 
         rev[length] = '\0';
-        long long  revTime = 0ll;
+        long long revTime = 0ll;
         long long nowTime = 0ll;
         long long processTime = 0ll;
         int type = rev[0];
         int readLength;
 
         switch (type) {
-
 
 
             case DESCRIBE_RESP: {
@@ -116,7 +128,7 @@ void *tcpListener(void *args) {
                 break;
             }
 
-            case START_RESP:{
+            case START_RESP: {
                 struct StartRespInfo *info;
                 readLength = 13;
                 char data[readLength];
@@ -126,10 +138,11 @@ void *tcpListener(void *args) {
                 arrCopy(data, 0, recBuf, 1, readLength);
                 info = startRespDecode(recBuf);
                 startTime = info->time;
-                log_info("startTime=%lld\n",startTime);
+                log_info("startTime=%lld\n", startTime);
                 log_info("------ rev start resp msg ------\n");
 
-                break;}
+                break;
+            }
 
             case PAUSE_RESP:
                 readLength = 5;
@@ -183,7 +196,8 @@ void *tcpListener(void *args) {
                 nowPingTimestamp = p->timestamp - startTime;
                 //printf("timestamp=%lld -   startTime=%lld = %lld\n",p->timestamp,startTime,p->timestamp-startTime);
                 RTT = p->rtt;
-                log_info("------ seq=%d   rtt=%d   timestamp=%lld  nonPing=%lld------ \n", p->sequence,RTT,p->timestamp,nowPingTimestamp);
+                log_info("------ seq=%d   rtt=%d   timestamp=%lld  nonPing=%lld------ \n", p->sequence, RTT,
+                         p->timestamp, nowPingTimestamp);
                 //阻塞一个rtt时间
                 while (1) {
                     nowTime = getSystemTimestamp();
@@ -207,8 +221,8 @@ void *tcpListener(void *args) {
                         list = packet;
                         ptr = packet;
                     } else {
-                            ptr->next = packet;
-                            ptr = ptr->next;
+                        ptr->next = packet;
+                        ptr = ptr->next;
                     }
                     point = point->next;
                 }
@@ -224,21 +238,59 @@ void *tcpListener(void *args) {
                 aidePoint = list;
 
                 long long start = getSystemTimestamp();
-               // printf("------ seq=%d   prevPing=%lld   nowPing=%lld",p->sequence,prevPingTimestamp,nowPingTimestamp);
-                while(aidePoint != NULL){
+                // printf("------ seq=%d   prevPing=%lld   nowPing=%lld",p->sequence,prevPingTimestamp,nowPingTimestamp);
+                while (aidePoint != NULL) {
                     //printf("%d\n",aidePoint->sendTime);
-                    if (aidePoint->sendTime >= prevPingTimestamp && aidePoint->sendTime < nowPingTimestamp){
+                    if (aidePoint->sendTime >= prevPingTimestamp && aidePoint->sendTime < nowPingTimestamp) {
                         ++revPacketCount;
                     }
                     aidePoint = aidePoint->next;
                 }
                 //printf("time:%ld\n",(getSystemTimestamp() - start));
-                log_info("------ revPacketCount %d------\n",revPacketCount);
+                log_info("------ revPacketCount %d------\n", revPacketCount);
+
+                struct PacketGroup *curr = packetGroupList;
+                struct PacketGroup *prev = NULL;
+                while (curr != NULL) {
+                    struct PacketGroupDelay *packetGroupDelay;
+                    packetGroupDelay = (struct PacketGroupDelay *) malloc(sizeof(struct PacketGroupDelay));
+                    if (packetGroupDelay == NULL) {
+                        log_error("packetGroupDelay is NULL");
+                        exit(-1);
+                    }
+
+                    if (prev != NULL){
+                        packetGroupDelay->arrivalTimeMs = curr->firstArrivalPacketTimestamp;
+                        packetGroupDelay->sendTimeMs = curr->firstSentPacketTimestamp;
+                        packetGroupDelay->sendDelta =  (int) (curr->lastSentPacketTimestamp -
+                                                             prev->lastSentPacketTimestamp);
+                        packetGroupDelay->recvDelta = (int) (curr->lastArrivalPacketTimestamp -
+                                                             prev->lastArrivalPacketTimestamp);
+                        packetGroupDelay->next = NULL;
+
+                        addPacketGroupDelay(packetGroupDelay);
+                        delPacketGroup(prev->groupIndex);
+
+                        free(prev);
+                        prev = NULL;
+                    }
+
+                    prev = curr;
+                    curr = curr->next;
+
+                }
+
+                char delayChangeLevel = calculate(groupDelayList);
+                free(groupDelayList);
+                groupDelayList = NULL;
+
 
                 processTime = getSystemTimestamp() - revTime;
-               //printf("------ rev packet count=%d ------\n", revPacketCount);
+                //printf("------ rev packet count=%d ------\n", revPacketCount);
                 //fflush(stdout);
-                sendPong(p->sequence, p->timestamp, processTime, revPacketCount, '1' - 48);
+
+                //TODO delayChangLevel 需要计算得到  暂时用 a = 97 代替
+                sendPong(p->sequence, p->timestamp, processTime, revPacketCount, delayChangeLevel);
 
 
                 revPacketCount = 0;

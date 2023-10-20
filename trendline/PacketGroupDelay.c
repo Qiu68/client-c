@@ -6,7 +6,7 @@
 
 #include "PacketGroupDelay.h"
 
-struct PacketGroupDelay *groupDelayList = NULL, *tail;
+struct PacketGroupDelay *groupDelayList = NULL, *tail = NULL;
 
 struct PacketGroupDelay * getPacketGroupDelay(int groupIndex){
 
@@ -19,6 +19,7 @@ int addPacketGroupDelay(struct PacketGroupDelay *packetGroup) {
     if (NULL == groupDelayList) {
         groupDelayList = packetGroup;
         tail = packetGroup;
+        groupDelayList->next = NULL;
     } else {
         struct PacketGroupDelay *tmp = groupDelayList;
         //将新的分包升序插入包组链表
@@ -46,3 +47,5 @@ int addPacketGroupDelay(struct PacketGroupDelay *packetGroup) {
     }
     return 1;
 }
+
+

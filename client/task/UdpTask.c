@@ -45,6 +45,8 @@ int addGroupIndex(struct PacketGroup *packetGroup,struct PacketIds *id);
 
 void intToString(char src[],int num);
 
+int addPacketGroup(struct PacketGroup *packetGroup);
+
 extern struct sockaddr_in addr;
 extern int udpSockFd;
 extern int frameFlagArr[];
@@ -65,7 +67,7 @@ extern int fileFrameCount;
 int udpListenerFlag = 1;
 int revPackageCount = 0;
 //统计一个两个ping之间接收到的包数
-struct Packet *head, *p, *q;
+struct Packet *head, *p, *packetPtr;
 
 long long receiveTimeStamp = 0ll;
 int beforeFrameIndex = 0;
@@ -76,8 +78,9 @@ int beforePacketOrder;
 int nowPacketOrder;
 struct Frame *frame;
 
-struct PacketGroup nowPacketGroup;
-struct PacketGroup beforePacketGroup;
+struct PacketGroup *nowPacketGroup = NULL;
+struct PacketGroup *beforePacketGroup = NULL;
+
 
 
 void *udpListener(void *args);
@@ -115,6 +118,14 @@ extern long long fileLength;
 void udpListenerInit() {
 
     printf("------ udp 监听开启 ------ \n");
+
+    nowPacketGroup = (struct PacketGroup*) malloc(sizeof (struct PacketGroup));
+    nowPacketGroup->lastSentPacketTimestamp = 0;
+    nowPacketGroup->lastArrivalPacketTimestamp = 0;
+    nowPacketGroup->packageCount = 0;
+    nowPacketGroup->firstArrivalPacketTimestamp = 0;
+    nowPacketGroup->firstSentPacketTimestamp = 0;
+    nowPacketGroup->next = NULL;
 
     pthread_create(&udpTask, NULL, udpListener, NULL);
 }
@@ -345,10 +356,77 @@ int packetProcess(struct FramePacket *package) {
 
 }
 
+long long  delOutdatedPackets(struct FramePacket *framePacket,long long time){
+    //上锁
+    pthread_mutex_lock(&packetCountMutex);
+    if (head == NULL) {
+        head = packetPtr;
+        p = packetPtr;
+    } else {
+        p->next = packetPtr;
+        p = p->next;
+    }
+
+    struct Packet *point, *aide;
+    int count = 0;
+    point = aide = head;
+    //5秒清理掉没用的数据
+    //printf("111111111111111\n");
+    if (framePacket->sendTime - time >= 5000) {
+        while (point != NULL) {
+            if (point->sendTime < oldPrevPingTimestamp) {
+
+                //移除首节点
+                if (head == point) {
+                    //链表只有一个节点的情况
+                    if (head->next == NULL) {
+                        head = NULL;
+                    } else {
+                        head = head->next;
+                    }
+                }
+
+                    //移除尾结点
+                else if (point->next == NULL) {
+                    //遍历到ptr节点的上一个节点
+                    while (aide->next != point) {
+                        aide = aide->next;
+                    }
+                    //断开与ptr的连接
+                    aide->next = NULL;
+                }
+
+                    //中间节点
+                else {
+
+                    //遍历到ptr节点的上一个节点
+                    while (aide->next != point) {
+                        aide = aide->next;
+                    }
+                    aide->next = point->next;
+                }
+                aide = NULL;
+                count++;
+            }
+            point = point->next;
+        }
+        log_info("------ 清理%d个数据 ------\n", count);
+        time = 0;
+    }
+
+    pthread_mutex_unlock(&packetCountMutex);
+    return time;
+
+}
+
 void *udpListener(void *args) {
     char buf[1500];
     long long clearTime = 0l;
     long lastFrameLengthCount = 0l;
+    long long prevPrintTime = getSystemTimestamp();
+
+
+
 
     while (udpListenerFlag) {
 
@@ -374,12 +452,12 @@ void *udpListener(void *args) {
                 long long s = getTimeStampByUs();
                 //printf("------ rev udp frame msg ------\n");
                 struct FramePacket *framePacket;
-                q = (struct Packet *) malloc(sizeof(struct Packet));
+                packetPtr = (struct Packet *) malloc(sizeof(struct Packet));
 
                 framePacket = FramePacketDecode(buf, length);
-                q->sendTime = framePacket->sendTime;
-                q->revTime = getSystemTimestamp();
-                q->next = NULL;
+                packetPtr->sendTime = framePacket->sendTime;
+                packetPtr->revTime = getSystemTimestamp();
+                packetPtr->next = NULL;
                 receiveTimeStamp = getSystemTimestamp();
                 if (clearTime == 0) {
                     clearTime = framePacket->sendTime;
@@ -388,76 +466,61 @@ void *udpListener(void *args) {
                 //char packetId[] = framePacket->frameIndex + framePacket->packageIndex +framePacket->sendTime;
 
 
-//                int groupIndex = framePacket->sendTime / 5;
-//                struct PacketGroup *packetGroup = getPacketGroup(groupIndex);
-//                if (NULL != packetGroup) {
-//                    packetGroup->lastArrivalPacketTimestamp = max(q->revTime,packetGroup->lastArrivalPacketTimestamp);
-//                    packetGroup->lastSentPacketTimestamp = max(q->sendTime,packetGroup->lastSentPacketTimestamp);
-//                    packetGroup->packageCount = (packetGroup->packageCount) + 1;
-//                    //addGroupIndex(packetGroup)
-//                }
+                int groupIndex = framePacket->sendTime / 5;
+                struct PacketGroup *packetGroup = getPacketGroup(groupIndex);
 
-                //上锁
-                pthread_mutex_lock(&packetCountMutex);
-                if (head == NULL) {
-                    head = q;
-                    p = q;
+                if (NULL != packetGroup) {
+                    packetGroup->lastArrivalPacketTimestamp = max(packetPtr->revTime,packetGroup->lastArrivalPacketTimestamp);
+                    packetGroup->lastSentPacketTimestamp = max(packetPtr->sendTime,packetGroup->lastSentPacketTimestamp);
+                    packetGroup->packageCount = (packetGroup->packageCount) + 1;
+                }
+
+                if (nowPacketGroup->firstArrivalPacketTimestamp == 0) {
+                    nowPacketGroup->firstSentPacketTimestamp = framePacket->sendTime;
+                    nowPacketGroup->firstArrivalPacketTimestamp = packetPtr->revTime;
+                    nowPacketGroup->lastArrivalPacketTimestamp = packetPtr->revTime;
+                    //得到包组下标
+                    nowPacketGroup->groupIndex = framePacket->sendTime / 5;
+                    nowPacketGroup->lastSentPacketTimestamp = framePacket->sendTime;
+                    nowPacketGroup->packageCount = (nowPacketGroup->packageCount) + 1;
+                   // nowPacketGroup.packages.add(packetID);
+                }
+
+                //5ms内接收的包为一个包组
+                if ((framePacket->sendTime / 5) == nowPacketGroup->groupIndex) {
+//
+                    nowPacketGroup->lastArrivalPacketTimestamp = max(nowPacketGroup->lastArrivalPacketTimestamp, packetPtr->revTime);
+
+                    nowPacketGroup->lastSentPacketTimestamp = max(nowPacketGroup->lastSentPacketTimestamp, packetPtr->sendTime);
+                    nowPacketGroup->packageCount = (nowPacketGroup->packageCount) + 1;
+                    //nowPacketGroup.packages.add(packetID);
                 } else {
-                    p->next = q;
-                    p = p->next;
-                }
-
-                struct Packet *point, *aide;
-                int count = 0;
-                point = aide = head;
-                //5秒清理掉没用的数据
-                //printf("111111111111111\n");
-                if (framePacket->sendTime - clearTime >= 5000) {
-                    while (point != NULL) {
-                        if (point->sendTime < oldPrevPingTimestamp) {
-
-                            //移除首节点
-                            if (head == point) {
-                                //链表只有一个节点的情况
-                                if (head->next == NULL) {
-                                    head = NULL;
-                                } else {
-                                    head = head->next;
-                                }
-                            }
-
-                                //移除尾结点
-                            else if (point->next == NULL) {
-                                //遍历到ptr节点的上一个节点
-                                while (aide->next != point) {
-                                    aide = aide->next;
-                                }
-                                //断开与ptr的连接
-                                aide->next = NULL;
-                            }
-
-                                //中间节点
-                            else {
-
-                                //遍历到ptr节点的上一个节点
-                                while (aide->next != point) {
-                                    aide = aide->next;
-                                }
-                                aide->next = point->next;
-                            }
-                            aide = NULL;
-                            count++;
-                        }
-                        point = point->next;
+                    if (beforePacketGroup != NULL) {
+                        //packetGroupMap.put(nowPacketGroup.groupIndex, nowPacketGroup);
+                        addPacketGroup(nowPacketGroup);
                     }
-                    log_info("------ 清理%d个数据 ------\n", count);
-                    clearTime = 0;
+
+                    beforePacketGroup = nowPacketGroup;
+
+                    //nowPacketGroup = new PacketGroup();
+                    nowPacketGroup = (struct PacketGroup*) malloc(sizeof (struct PacketGroup));
+                    nowPacketGroup->firstArrivalPacketTimestamp = packetPtr->revTime;
+                    nowPacketGroup->firstSentPacketTimestamp = packetPtr->sendTime;
+
+                    nowPacketGroup->lastArrivalPacketTimestamp = packetPtr->revTime;
+                    nowPacketGroup->lastSentPacketTimestamp = packetPtr->sendTime;
+                    nowPacketGroup->groupIndex = framePacket->sendTime / 5;
+                    nowPacketGroup->packageCount++;
+                    //nowPacketGroup->packages.add(packetID);
+
+//                        System.out.println("----- nowPacketGroup.receiveTimestamp " +nowPacketGroup.receiveTimestamp);
+
                 }
 
-                pthread_mutex_unlock(&packetCountMutex);
 
-
-
+//                long long start = getSystemTimestamp();
+               clearTime =  delOutdatedPackets(framePacket,clearTime);
+//                log_info("调用delOutdatedPackets耗时 %ld",(getSystemTimestamp() - start));
 
                 nowFrameIndex = framePacket->frameIndex;
                 if (framePacket->frameIndex == 1) {
@@ -484,9 +547,13 @@ void *udpListener(void *args) {
                 int packetCount = (framePacket->frameLength + 8) % (packageSize - 25)
                                   == 0 ? (framePacket->frameLength + 8) / (packageSize - 25)
                                        : ((framePacket->frameLength + 8) / (packageSize - 25)) + 1;
-                log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  packetCount = %d  ------\n",
-                   framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength, packetCount);
-                fflush(stdout);
+                if (getSystemTimestamp() - prevPrintTime > 1000){
+                    log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  packetCount = %d  ------\n",
+                             framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength, packetCount);
+                    prevPrintTime = getSystemTimestamp();
+                }
+
+               // fflush(stdout);
 
                 if (framePacket->frameIndex != beforeFrameIndex) {
                     nowPacketTimestamp = getSystemTimestamp();
