@@ -3,19 +3,20 @@
 //
 
 #include <stdio.h>
-#include <winsock2.h>
-#include <windows.h>
-#pragma comment(lib, "ws2_32.lib")
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include<string.h>
 #include "../../log/log.h"
 
-//#define ServerHost "47.103.69.132"
-#define ServerHost "127.0.0.1"
+#define ServerHost "47.103.69.132"
+//#define ServerHost "192.168.50.100"
 #define ServerTcpPort  8173
 int sock;
 int tcpInit(){
-    WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
+//    WSADATA wsaData;
+//    WSAStartup(MAKEWORD(2, 2), &wsaData);
     //创建套接字
     sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     unsigned optVal;

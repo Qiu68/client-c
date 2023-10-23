@@ -51,11 +51,11 @@ FILE *logFd;
 
 int main() {
 
-    logFd = fopen("d://2/client.txt", "ab");
-    if(logFd == NULL) {
-        return -1;
-    }
-    log_add_fp(logFd,LOG_INFO);
+//    logFd = fopen("d://2/client.txt", "ab");
+//    if(logFd == NULL) {
+//        return -1;
+//    }
+//    log_add_fp(logFd,LOG_INFO);
 
 
     pthread_mutex_init(&packetCountMutex,NULL);

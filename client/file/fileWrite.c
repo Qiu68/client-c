@@ -13,7 +13,7 @@ extern atomic_int writeCount;
 extern int writeCountTmp;
 
 int writeFileInit() {
-    char *destFile = "d:/2/test.h264";
+    char *destFile = "/home/test/test.h264";
 
     destFp = fopen(destFile, "wb");
     if (destFp == NULL) {

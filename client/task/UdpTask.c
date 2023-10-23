@@ -4,13 +4,11 @@
 #include "stdio.h"
 #include "../../log/log.h"
 #include <pthread.h>
-#include <winsock2.h>
-#include <math.h>
-
-
-#pragma comment(lib, "ws2_32.lib")
-
-#include <ws2tcpip.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/msg.h>
+#include <stdlib.h>
 
 
 #include "../../packet/PacketType.h"
@@ -47,6 +45,8 @@ void intToString(char src[],int num);
 
 int addPacketGroup(struct PacketGroup *packetGroup);
 
+int sendPacketGroupMsg(int msgID,void* data,int size);
+
 extern struct sockaddr_in addr;
 extern int udpSockFd;
 extern int frameFlagArr[];
@@ -77,6 +77,8 @@ long long beforePacketTimestamp = 0ll;
 int beforePacketOrder;
 int nowPacketOrder;
 struct Frame *frame;
+
+int packetGroupMsgId = -1;
 
 struct PacketGroup *nowPacketGroup = NULL;
 struct PacketGroup *beforePacketGroup = NULL;
@@ -118,6 +120,12 @@ extern long long fileLength;
 void udpListenerInit() {
 
     printf("------ udp 监听开启 ------ \n");
+
+    packetGroupMsgId = msgget((key_t) 1000, 0664 | IPC_CREAT);//获取消息队列
+    if (packetGroupMsgId == -1) {
+        log_error("msgget err");
+        exit(-1);
+    }
 
     nowPacketGroup = (struct PacketGroup*) malloc(sizeof (struct PacketGroup));
     nowPacketGroup->lastSentPacketTimestamp = 0;
@@ -471,8 +479,10 @@ void *udpListener(void *args) {
                 struct PacketGroup *packetGroup = getPacketGroup(groupIndex);
 
                 if (NULL != packetGroup) {
-                    packetGroup->lastArrivalPacketTimestamp = max(packetPtr->revTime,packetGroup->lastArrivalPacketTimestamp);
-                    packetGroup->lastSentPacketTimestamp = max(packetPtr->sendTime,packetGroup->lastSentPacketTimestamp);
+                    packetGroup->lastArrivalPacketTimestamp = packetPtr->revTime > packetGroup->lastArrivalPacketTimestamp
+                                                              ? packetPtr->revTime:packetGroup->lastArrivalPacketTimestamp;
+                    packetGroup->lastSentPacketTimestamp = packetPtr->sendTime > packetGroup->lastSentPacketTimestamp
+                                                              ?packetPtr->sendTime : packetGroup->lastSentPacketTimestamp;
                     packetGroup->packageCount = (packetGroup->packageCount) + 1;
                 }
 
@@ -491,16 +501,22 @@ void *udpListener(void *args) {
                 //5ms内接收的包为一个包组
                 if ((framePacket->sendTime / 5) == nowPacketGroup->groupIndex) {
 //
-                    nowPacketGroup->lastArrivalPacketTimestamp = max(nowPacketGroup->lastArrivalPacketTimestamp, packetPtr->revTime);
+                    nowPacketGroup->lastArrivalPacketTimestamp = nowPacketGroup->lastArrivalPacketTimestamp > packetPtr->revTime
+                                                                    ? nowPacketGroup->lastArrivalPacketTimestamp : packetPtr->revTime;
 
-                    nowPacketGroup->lastSentPacketTimestamp = max(nowPacketGroup->lastSentPacketTimestamp, packetPtr->sendTime);
+                    nowPacketGroup->lastSentPacketTimestamp = nowPacketGroup->lastSentPacketTimestamp > packetPtr->sendTime
+                                                                    ? nowPacketGroup->lastSentPacketTimestamp : packetPtr->sendTime;
                     nowPacketGroup->packageCount = (nowPacketGroup->packageCount) + 1;
                     nowPacketGroup->next = NULL;
                     //nowPacketGroup.packages.add(packetID);
                 } else {
                     if (beforePacketGroup != NULL) {
                         //packetGroupMap.put(nowPacketGroup.groupIndex, nowPacketGroup);
-                        addPacketGroup(nowPacketGroup);
+                        //addPacketGroup(nowPacketGroup);
+                        int result = sendPacketGroupMsg(packetGroupMsgId,(void *)nowPacketGroup,sizeof (struct PacketGroup));
+                        if (result == -1){
+                            exit(-1);
+                        }
                     }
 
                     beforePacketGroup = nowPacketGroup;

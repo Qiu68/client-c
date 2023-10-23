@@ -2,11 +2,8 @@
 // Created by 24546 on 2023/9/25.
 //
 #include <stdio.h>
-#include <sys/types.h>
-#include <winsock2.h>
-#include <windows.h>
-#pragma comment(lib, "ws2_32.lib")
-#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <unistd.h>
 
 #include "../command/CommandLenght.h"

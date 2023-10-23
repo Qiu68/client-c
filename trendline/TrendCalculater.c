@@ -3,7 +3,7 @@
 //
 #include <stdio.h>
 #include <pthread.h>
-#include <windows.h>
+
 #include <stdlib.h>
 #include <math.h>
 
@@ -12,6 +12,7 @@
 #include "DelayHistory.h"
 #include "BandwidthUsage.h"
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 extern pthread_mutex_t trendCalculaterMutex;
 extern struct delayHistory *delayHistoryHead;
@@ -181,7 +182,7 @@ void updateThreshold(double modifiedTrend, int arrivalTimeMs) {
     //获取阈值计算系数
     double k = abs(modifiedTrend) < threshold ? K_DOWN : K_UP;
     int kMaxTimeDeltaMs = 100;
-    int deltaMs = min(arrivalTimeMs - lastUpdateMs, kMaxTimeDeltaMs);
+    int deltaMs = MIN(arrivalTimeMs - lastUpdateMs, kMaxTimeDeltaMs);
     threshold += k * (abs(modifiedTrend) - threshold) * deltaMs;
 
     //SafeClamp   限制阈值在[6,600]之间
@@ -204,7 +205,7 @@ int detect(double trend, int sendDeltaMs, int arrivalTimeMs) {
         return usage;
     }
     //实际使用中，由于trend 是一个非常小的值，会乘以包组数量和增益系数进行放大得到modifiedTrend
-    double modifiedTrend = min(groupCount, 60) * trend * THRESHOLD_GAIN;
+    double modifiedTrend = MIN(groupCount, 60) * trend * THRESHOLD_GAIN;
     if (modifiedTrend > threshold) {
         //持续时间超过100ms并且 trend值持续变大，认为此时处于 overuse 状态。
         if (timeOverUsing == -1) {
@@ -257,7 +258,7 @@ char getChangeState(struct PacketGroupDelay *groupDelay) {
     }
 
     groupCount++;
-    groupCount = min(groupCount, 1000);
+    groupCount = MIN(groupCount, 1000);
 
     //包组延时
     int delayMs = groupDelay->recvDelta - groupDelay->sendDelta;

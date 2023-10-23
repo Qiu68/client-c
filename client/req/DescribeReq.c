@@ -2,10 +2,7 @@
 // Created by 24546 on 2023/9/25.
 //
 
-#include <sys/types.h>
-#include <winsock2.h>
-#include <windows.h>
-#pragma comment(lib, "ws2_32.lib")
+
 #include "../../command/CommandType.h"
 #include "../../command/CommandLenght.h"
 

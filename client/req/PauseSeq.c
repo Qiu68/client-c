@@ -1,8 +1,8 @@
 //
 // Created by 24546 on 2023/10/11.
-#include <winsock2.h>
-#include <windows.h>
-#pragma comment(lib, "ws2_32.lib")
+
+#include <sys/socket.h>
+
 
 #include "stdio.h"
 #include "../../command/CommandType.h"

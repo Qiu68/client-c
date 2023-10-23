@@ -2,10 +2,12 @@
 // Created by 24546 on 2023/9/22.
 //
 #include <sys/types.h>
-#include <winsock2.h>
-#include <windows.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
-#pragma comment(lib, "ws2_32.lib")
+
 
 #include<string.h>
 #include <pthread.h>
@@ -24,6 +26,8 @@
 #include "../../trendline/PacketGroupDelay.h"
 
 extern int sock;
+
+extern int packetGroupMsgId;
 
 extern pthread_mutex_t packetCountMutex;
 
@@ -49,6 +53,8 @@ struct StartRespInfo *startRespDecode(char data[]);
 long getLeadTime(struct timeval *start, struct timeval *end);
 
 long long getSystemTimestamp();
+
+int revPacketGroupMsg(int msgId,void* data);
 
 
 int delPacketGroup(int groupIndex);
@@ -256,62 +262,38 @@ void *tcpListener(void *args) {
 //                list = NULL;
 //                ptr = NULL;
 //
-//                struct PacketGroup* packetGroupListBak,*packetGroup,*packetGroupTmp,*packetGroupPoint;
-//                packetGroup = packetGroupList;
-//                while(packetGroup != NULL){
-//                    packetGroupTmp = (struct PacketGroup*) malloc(sizeof (struct PacketGroup));
-//                    //memcpy(packetGroupTmp,packetGroup,sizeof (struct PacketGroup));
-//                    packetGroupTmp->lastArrivalPacketTimestamp = packetGroup->lastArrivalPacketTimestamp;
-//                    packetGroupTmp->lastSentPacketTimestamp = packetGroup->lastSentPacketTimestamp;
-//                    packetGroupTmp->firstSentPacketTimestamp = packetGroup->firstSentPacketTimestamp;
-//                    packetGroupTmp->groupIndex = packetGroup->groupIndex;
-//                    packetGroupTmp->packageCount = packetGroup->packageCount;
-//                    packetGroupTmp->packages = packetGroup->packages;
-//                    packetGroupTmp->next = NULL;
-//                    if (packetGroupListBak == NULL) {
-//                        packetGroupListBak = packetGroupTmp;
-//                        packetGroupPoint = packetGroupTmp;
-//                        packetGroupPoint->next = NULL;
-//                    } else {
-//                        packetGroupPoint->next = packetGroup;
-//                        packetGroupPoint = packetGroupPoint->next;
-//                        packetGroupPoint->next = NULL;
-//                    }
-//                    packetGroup = packetGroup->next;
-//                }
-
-
-                struct PacketGroup *curr = packetGroupList;
+                struct PacketGroup *curr;
                 struct PacketGroup *prev = NULL;
-                int count1 = 0;
-                while (curr != NULL) {
-                    struct PacketGroupDelay *packetGroupDelay;
-                    packetGroupDelay = (struct PacketGroupDelay *) malloc(sizeof(struct PacketGroupDelay));
+                int result = 0;
+                while (true){
+                    curr = (struct PacketGroup*) malloc(sizeof (struct PacketGroup));
+                    result = revPacketGroupMsg(packetGroupMsgId,curr);
+                    //log_info("------- curr->groupIndex = %d",curr->groupIndex);
+                    if(result == -1){
+                        break;
+                    }
+                    else{
+                        struct PacketGroupDelay *packetGroupDelay;
+                        packetGroupDelay = (struct PacketGroupDelay *) malloc(sizeof(struct PacketGroupDelay));
+                        if (prev != NULL){
+                            packetGroupDelay->arrivalTimeMs = curr->firstArrivalPacketTimestamp;
+                            packetGroupDelay->sendTimeMs = curr->firstSentPacketTimestamp;
+                            packetGroupDelay->sendDelta =  (int) (curr->lastSentPacketTimestamp -
+                                                                  prev->lastSentPacketTimestamp);
+                            packetGroupDelay->recvDelta = (int) (curr->lastArrivalPacketTimestamp -
+                                                                 prev->lastArrivalPacketTimestamp);
+                            packetGroupDelay->next = NULL;
 
-                    if (prev != NULL){
-                        packetGroupDelay->arrivalTimeMs = curr->firstArrivalPacketTimestamp;
-                        packetGroupDelay->sendTimeMs = curr->firstSentPacketTimestamp;
-                        packetGroupDelay->sendDelta =  (int) (curr->lastSentPacketTimestamp -
-                                                             prev->lastSentPacketTimestamp);
-                        packetGroupDelay->recvDelta = (int) (curr->lastArrivalPacketTimestamp -
-                                                             prev->lastArrivalPacketTimestamp);
-                        packetGroupDelay->next = NULL;
-
-                        addPacketGroupDelay(packetGroupDelay);
-                        delPacketGroup(prev->groupIndex);
-                         // free(prev);
-                        //prev = NULL;
+                            addPacketGroupDelay(packetGroupDelay);
+                        }
+                        prev = curr;
                     }
 
-                    prev = curr;
-                    curr = curr->next;
-                    ++count1;
                 }
-                log_info("packetGroup count = %d",count1);
                 char delayChangeLevel = calculate(groupDelayList);
                 log_info("delayChangLevel = %d",delayChangeLevel);
-                //free(groupDelayList);
-                //groupDelayList = NULL;
+                free(groupDelayList);
+                groupDelayList = NULL;
 
 
                 processTime = getSystemTimestamp() - revTime;
@@ -319,7 +301,7 @@ void *tcpListener(void *args) {
                 //fflush(stdout);
 
                 //TODO delayChangLevel 需要计算得到  暂时用 a = 97 代替
-                sendPong(p->sequence, p->timestamp, processTime, revPacketCount, 'a');
+                sendPong(p->sequence, p->timestamp, processTime, revPacketCount, delayChangeLevel);
 
                 revPacketCount = 0;
                 oldNowPingTimestamp = nowPingTimestamp;
