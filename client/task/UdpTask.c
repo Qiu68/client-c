@@ -466,6 +466,7 @@ void *udpListener(void *args) {
                 //char packetId[] = framePacket->frameIndex + framePacket->packageIndex +framePacket->sendTime;
 
 
+//                long long start = getSystemTimestamp();
                 int groupIndex = framePacket->sendTime / 5;
                 struct PacketGroup *packetGroup = getPacketGroup(groupIndex);
 
@@ -486,6 +487,7 @@ void *udpListener(void *args) {
                    // nowPacketGroup.packages.add(packetID);
                 }
 
+
                 //5ms内接收的包为一个包组
                 if ((framePacket->sendTime / 5) == nowPacketGroup->groupIndex) {
 //
@@ -493,6 +495,7 @@ void *udpListener(void *args) {
 
                     nowPacketGroup->lastSentPacketTimestamp = max(nowPacketGroup->lastSentPacketTimestamp, packetPtr->sendTime);
                     nowPacketGroup->packageCount = (nowPacketGroup->packageCount) + 1;
+                    nowPacketGroup->next = NULL;
                     //nowPacketGroup.packages.add(packetID);
                 } else {
                     if (beforePacketGroup != NULL) {
@@ -516,6 +519,8 @@ void *udpListener(void *args) {
 //                        System.out.println("----- nowPacketGroup.receiveTimestamp " +nowPacketGroup.receiveTimestamp);
 
                 }
+//
+//                log_info("包组延迟计算耗时 = %lld",(getSystemTimestamp() - start));
 
 
 //                long long start = getSystemTimestamp();

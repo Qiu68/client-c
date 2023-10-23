@@ -60,12 +60,12 @@ int addPacketGroup(struct PacketGroup *packetGroup) {
         packetGroupList->next = NULL;
         packetGroupTail = packetGroup;
     } else {
-        packetGroupTail = packetGroup;
+        packetGroupTail->next = packetGroup;
         packetGroupTail = packetGroup;
         packetGroupTail->next = NULL;
     }
     pthread_mutex_unlock(&packetGroupMutex);
-    log_info("addPacketGroup 释放锁成功");
+   log_info("addPacketGroup 释放锁成功");
     return 1;
 }
 
