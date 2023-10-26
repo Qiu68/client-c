@@ -34,5 +34,5 @@ long getLeadTime(struct timeval *start,struct timeval *end){
 long long getSystemTimestamp(){
     struct timeval time;
     gettimeofday(&time, NULL);
-    return (time.tv_sec) * 1000ll + (time.tv_usec) / 1000;
+    return (time.tv_sec) * 1000ll + (time.tv_usec / 1000);
 }

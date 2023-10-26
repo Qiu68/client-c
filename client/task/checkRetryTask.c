@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include "../../client/pojo/Frame.h"
+#include "../../log/log.h"
 #include "checkFramTask.h"
 
 
@@ -160,12 +161,13 @@ void *retry(void *args) {
                     addLossPacketAndCast(frameTmp->frameIndex, lossPacket->id);
                     lossPacket->retryCount = (lossPacket->retryCount) + 1;
                     lossPacket->lossTimestamp = getSystemTimestamp();
+                    log_info("------ 111 重传 frameIndex = %d   packageIndex = %d ------\n",frameTmp->frameIndex,lossPacket->id);
                 }
                 //符合重传规则 加入重传链表
                else if (nowTimestamp - lossPacket->lossTimestamp > ((lossPacket->retryCount * 100))) {
 
                     addLossPacketAndCast(frameTmp->frameIndex, lossPacket->id);
-                    printf("------ 重传 frameIndex = %d   packageIndex = %d ------\n",frameTmp->frameIndex,lossPacket->id);
+                    log_info("------ 222 重传 frameIndex = %d   packageIndex = %d ------\n",frameTmp->frameIndex,lossPacket->id);
                     //重传次数不超过6次 就加1
                     if (lossPacket->retryCount < 6) {
                         lossPacket->retryCount = (lossPacket->retryCount) + 1;

@@ -44,8 +44,9 @@ struct Frame *frameTail = NULL;
 int frameFlagArr[500000];
 
 int addFrame(struct Frame *frame) {
+    log_info("------ addFrame 获取锁 ------\n");
     pthread_mutex_lock(&frameMutex);
-//    printf("------ addFrame 获取锁成功 ------\n");
+    log_info("------ addFrame 获取锁成功 ------\n");
     fflush(stdout);
     if (NULL == frameList) {
         frameList = frame;
@@ -57,16 +58,17 @@ int addFrame(struct Frame *frame) {
         frameTail->next = NULL;
     }
     pthread_mutex_unlock(&frameMutex);
-//    printf("------ addFrame 释放锁成功 ------\n");
-//    fflush(stdout);
+    log_info("------ addFrame 释放锁成功 ------\n");
+
     return 1;
 }
 int deleteFrameInComplete(int frameIndex);
 
 struct Frame *deleteFrame(struct Frame *frame) {
-
+    log_info("------ deleteFrame 获取锁 ------\n");
     struct Frame *deleteAide;
     pthread_mutex_lock(&frameMutex);
+    log_info("------ deleteFrame 获取锁成功 ------\n");
     deleteAide = frameList;
     //移除首节点
     if (frameList->frameIndex == frame->frameIndex) {
@@ -76,19 +78,21 @@ struct Frame *deleteFrame(struct Frame *frame) {
         } else {
             frameList = frameList->next;
             frame = NULL;
+            // return NULL;
         }
     }
         //移除尾结点
     else if (deleteAide->next == NULL) {
-        //遍历到ptr节点的上一个节点
-        while (deleteAide->next->frameIndex != frame->frameIndex) {
-            deleteAide = deleteAide->next;
-        }
-        //断开与ptr的连接
-        deleteAide->next = NULL;
-        free(frame);
-        frame = NULL;
-        //free(frame);
+        log_info("depeteAide->next == NULL");
+        // //遍历到ptr节点的上一个节点
+        // while (deleteAide->next->frameIndex != frame->frameIndex) {
+        //     deleteAide = deleteAide->next;
+        // }
+        // //断开与ptr的连接
+        // deleteAide->next = NULL;
+        // free(frame);
+        // frame = NULL;
+        // //free(frame);
     }
 
         //中间节点
@@ -103,6 +107,7 @@ struct Frame *deleteFrame(struct Frame *frame) {
     }
     pthread_mutex_unlock(&frameMutex);
     //packetSumLength(deleteAide);
+    log_info("------ deleteFrame 释放锁成功 ------\n");
     return deleteAide;
 }
 
@@ -129,7 +134,9 @@ int addFrameComplete(struct Frame *frame) {
 
 struct Frame *getInCompleteFrameByFrameIndex(int frameIndex) {
     struct Frame *findInCompleteFrame = NULL;
+    log_info("------ getInCompleteFrameByFrameIndex 获取锁 ------\n");
     pthread_mutex_lock(&frameInCompleteMutex);
+    log_info("------ getInCompleteFrameByFrameIndex 获取锁成功 ------\n");
     findInCompleteFrame = frameInCompleteList;
     while (findInCompleteFrame != NULL) {
         if (findInCompleteFrame->frameIndex == frameIndex) {
@@ -138,13 +145,17 @@ struct Frame *getInCompleteFrameByFrameIndex(int frameIndex) {
         }
         findInCompleteFrame = findInCompleteFrame->next;
     }
+
     pthread_mutex_unlock(&frameInCompleteMutex);
+    log_info("------ getInCompleteFrameByFrameIndex 释放锁成功 ------\n");
     return NULL;
 }
 
 struct Frame *getCompleteFrameByFrameIndex(int frameIndex) {
     struct Frame *findCompleteFrame = NULL;
+    log_info("------ getCompleteFrameByFrameIndex 获取锁 ------\n");
     pthread_mutex_lock(&frameCompleteMutex);
+    log_info("------ getCompleteFrameByFrameIndex 获取锁成功 ------\n");
     findCompleteFrame = frameCompleteList;
     while (findCompleteFrame != NULL) {
         if (findCompleteFrame->frameIndex == frameIndex) {
@@ -153,7 +164,9 @@ struct Frame *getCompleteFrameByFrameIndex(int frameIndex) {
         }
         findCompleteFrame = findCompleteFrame->next;
     }
+
     pthread_mutex_unlock(&frameCompleteMutex);
+    log_info("------ getCompleteFrameByFrameIndex 释放锁成功 ------\n");
     return NULL;
 }
 
@@ -161,11 +174,11 @@ struct Frame *getCompleteFrameByFrameIndex(int frameIndex) {
 int addFrameInComplete(struct Frame *frame) {
 
 
-//    printf("------ addFrameInComplete 获取锁 ------\n");
+    log_info("------ addFrameInComplete 获取锁 ------\n");
 //    fflush(stdout);
     struct Frame *tmp;
     pthread_mutex_lock(&frameInCompleteMutex);
-//    printf("------ addFrameInComplete 获取锁成功 ------\n");
+    log_info("------ addFrameInComplete 获取锁成功 ------\n");
     fflush(stdout);
     tmp = (struct Frame *) malloc(sizeof(struct Frame));
     memcpy(tmp, frame, sizeof(struct Frame));
@@ -192,18 +205,18 @@ int addFrameInComplete(struct Frame *frame) {
 
 
     pthread_mutex_unlock(&frameInCompleteMutex);
-//    printf("------ addFrameInComplete 释放锁 ------\n");
+    log_info("------ addFrameInComplete 释放锁 ------\n");
 //    fflush(stdout);
     return 1;
 }
 
 
 int deleteFrameInComplete(int frameIndex) {
-//    printf("------ deleteFrameInComplete  获取锁 ------ \n");
+    log_info("------ deleteFrameInComplete  获取锁 ------ \n");
 //    fflush(stdout);
     struct Frame *aide;
     pthread_mutex_lock(&frameInCompleteMutex);
-//    printf("------ deleteFrameInComplete  获取锁成功 ------ \n");
+    log_info("------ deleteFrameInComplete  获取锁成功 ------ \n");
 //    fflush(stdout);
     if (frameInCompleteList == NULL) {
         pthread_mutex_unlock(&frameInCompleteMutex);
@@ -219,6 +232,7 @@ int deleteFrameInComplete(int frameIndex) {
             frameInCompleteList = frameInCompleteList->next;
         }
         pthread_mutex_unlock(&frameInCompleteMutex);
+        log_info("------ deleteFrameInComplete  释放锁成功 ------");
         return 1;
     }
 
@@ -261,14 +275,14 @@ int deleteFrameInComplete(int frameIndex) {
     }
 
     pthread_mutex_unlock(&frameInCompleteMutex);
-//    printf("------ deleteFrameInComplete  释放锁 ------ \n");
+    log_info("------ deleteFrameInComplete  释放锁成功 ------");
 //    fflush(stdout);
     return 1;
 
 }
 
 int frameInCompleteListSize() {
-    // printf("------ frameInCompleteListSize 获取锁 ------\n");
+    //log_info("------ frameInCompleteListSize 获取锁 ------\n");
     fflush(stdout);
     struct Frame *tmp;
     // pthread_mutex_lock(&frameInCompleteMutex);
@@ -374,8 +388,8 @@ int writeFile() {
         //printf("%c",data[0]);
         frameFlagArr[tmp->frameIndex] = tmp->frameIndex;
 
-        log_info("------ 写入文件 frameIndex = %d  frameLength = %d  framePosition = %lld ------\n", tmp->frameIndex,
-               tmp->frameLength, tmp->framePosition);
+        // log_info("------ 写入文件 frameIndex = %d  frameLength = %d  framePosition = %lld ------\n", tmp->frameIndex,
+        //        tmp->frameLength, tmp->framePosition);
         writer(tmp->framePosition, data, tmp->frameLength);
         tmp = tmp->next;
 
@@ -405,7 +419,7 @@ void *task(void *args) {
 
                 int packetSum = packetSumLength(tmp);
                 if (tmp->packetNode == NULL) {
-                    printf("test\n");
+                    log_error("frameIndex = %d packetNode == NULL",tmp->frameIndex);
                 }
 
                 //收到的包字节数 == 帧字节数
@@ -413,14 +427,14 @@ void *task(void *args) {
                     struct Frame *inCompleteTmp;
                     inCompleteTmp = frameInCompleteList;
                     //如果不完整的帧链表存在该帧 则移除
-                    log_info("------ checkTask ------\n");
+                   // log_info("------ checkTask ------\n");
                    // fflush(stdout);
                     struct Frame *tmp1 = getInCompleteFrameByFrameIndex(tmp->frameIndex);
                     if (tmp1 != NULL && tmp1->frameIndex == tmp->frameIndex) {
-                        log_info("------ check deleteFrameInComplete 111 ------\n");
+                        //log_info("------ check deleteFrameInComplete 111 ------\n");
                         //fflush(stdout);
                         deleteFrameInComplete(tmp->frameIndex);
-                        log_info("------ check deleteFrameInComplete 222 ------\n");
+                        //log_info("------ check deleteFrameInComplete 222 ------\n");
                     }
 
 //                    printf("%d 检查完成\n", tmp->frameIndex);

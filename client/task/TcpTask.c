@@ -80,6 +80,7 @@ extern struct Packet *head;
 //分包最大字节数
 int packageSize = 0;
 long long startTime = 0;
+long long revTime = 0ll;
 long long nowPingTimestamp = 0ll;
 long long prevPingTimestamp = 0ll;
 long long oldNowPingTimestamp = 0ll;
@@ -144,7 +145,8 @@ void *tcpListener(void *args) {
                 arrCopy(data, 0, recBuf, 1, readLength);
                 info = startRespDecode(recBuf);
                 startTime = info->time;
-                log_info("startTime=%lld\n", startTime);
+                revTime = getSystemTimestamp();
+                log_info("startTime=%lld  revTime=%lld", startTime,revTime);
                 log_info("------ rev start resp msg ------\n");
 
                 break;
@@ -272,7 +274,7 @@ void *tcpListener(void *args) {
                     if(result == -1){
                         break;
                     }
-                    else{
+                    else{  
                         struct PacketGroupDelay *packetGroupDelay;
                         packetGroupDelay = (struct PacketGroupDelay *) malloc(sizeof(struct PacketGroupDelay));
                         if (prev != NULL){
@@ -284,24 +286,30 @@ void *tcpListener(void *args) {
                                                                  prev->lastArrivalPacketTimestamp);
                             packetGroupDelay->next = NULL;
 
+                             //log_info("  recvDelta  %d - sendDelta  %d = %d",packetGroupDelay->recvDelta,packetGroupDelay->sendDelta,packetGroupDelay->recvDelta - packetGroupDelay->sendDelta);
+
                             addPacketGroupDelay(packetGroupDelay);
                         }
                         prev = curr;
                     }
 
                 }
-                char delayChangeLevel = calculate(groupDelayList);
-                log_info("delayChangLevel = %d",delayChangeLevel);
+                int level = 0;
+                //TODO 斜率计算有问题，一直重复一个值
+                // char delayChangeLevel = calculate(groupDelayList);
+                // log_info("delayChangLevel = %d",delayChangeLevel);
                 free(groupDelayList);
                 groupDelayList = NULL;
+    
+
 
 
                 processTime = getSystemTimestamp() - revTime;
                 //printf("------ rev packet count=%d ------\n", revPacketCount);
                 //fflush(stdout);
 
-                //TODO delayChangLevel 需要计算得到  暂时用 a = 97 代替
-                sendPong(p->sequence, p->timestamp, processTime, revPacketCount, delayChangeLevel);
+                //TODO delayChangLevel 需要计算得到  暂时用 0 = 48 代替
+                sendPong(p->sequence, p->timestamp, processTime, revPacketCount, '0');
 
                 revPacketCount = 0;
                 oldNowPingTimestamp = nowPingTimestamp;

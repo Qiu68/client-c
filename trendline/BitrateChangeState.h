@@ -10,6 +10,6 @@ enum BitrateChangeState{
     //码率不变
     HOLD = '0',
     //码率下调
-    DECR = '-1'
+    DECR = '2'
 };
 #endif //CLIENT_TEST_BITRATECHANGESTATE_H

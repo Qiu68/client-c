@@ -11,6 +11,7 @@
 #include "PacketGroupDelay.h"
 #include "DelayHistory.h"
 #include "BandwidthUsage.h"
+#include "../log/log.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -93,6 +94,7 @@ struct bitrateChangeState {
 };
 
 
+int level = 0;
 //通过多个网络趋势数据   计算出码率调整等级    返回结果[-100,100]  =0表示不调整  <0表示码率下调  >0表示码率上调
 char calculateLevel(struct bitrateChangeState *list,int count) {
     if (count == 0) {
@@ -105,22 +107,24 @@ char calculateLevel(struct bitrateChangeState *list,int count) {
         if (state->stat == INCR){
             changeCount++;
         }
-        else{
+        else if(state->stat == DECR){
             changeCount--;
         }
         state = state->next;
     }
 
-    double levelTmp = (changeCount / count) * 100;
+    double levelTmp = (changeCount / (double)(count)) * 100;
+    log_info("delayState = %d  changCount = %d  count = %d",(int)levelTmp,changeCount,count);
 //    BigDecimal level = new BigDecimal(String.valueOf(changeCount)).divide(new
 //    BigDecimal(String.valueOf(count)), 2, BigDecimal.ROUND_HALF_UP).multiply(new
 //    BigDecimal("100"));
-    int level = (int) levelTmp;
+    level = (int) levelTmp;
     if (level == 0 && count <= 10){
+        log_info("level = %d",50);
         return 50;
     }
-
-    return (char)(level) - '48';
+    log_info("level = %d",level);
+    return (char) level;
 }
 
 
@@ -199,7 +203,7 @@ void updateThreshold(double modifiedTrend, int arrivalTimeMs) {
 
 
 int detect(double trend, int sendDeltaMs, int arrivalTimeMs) {
-    int usage = NORMAL;
+    char usage = NORMAL;
     if (groupCount < 2) {
         //当前样本数量不够
         return usage;
@@ -236,7 +240,7 @@ int detect(double trend, int sendDeltaMs, int arrivalTimeMs) {
     }
     prevTrend = trend;
     updateThreshold(modifiedTrend, arrivalTimeMs);
-//        log.info("TreadCalculater trend=" + trend + "-----modifiedTrend=" + modifiedTrend + "----threshold=" + threshold + "----usage=" + usage);
+    //log_info("TreadCalculater trend= %d  modifiedTrend= %d threshold= %d usga= %d",trend ,modifiedTrend,threshold,usage);
     return usage;
 }
 
@@ -263,13 +267,15 @@ char getChangeState(struct PacketGroupDelay *groupDelay) {
     //包组延时
     int delayMs = groupDelay->recvDelta - groupDelay->sendDelta;
     accumulatedDelay += delayMs;
+    log_info("recvDelta = %d  sendDelta = %d accumulatedDelay = %lf",groupDelay->recvDelta,groupDelay->sendDelta,accumulatedDelay);
 
     //对包组延时做平滑处理    平滑延迟公式 = 平滑系数 * 平滑延迟 + (1 - 平滑系数) * 累积的延迟
     smoothedDelay = SMOOTHING_COEF * smoothedDelay + (1 - SMOOTHING_COEF) * accumulatedDelay;
     struct delayHistory *delayHistory = (struct delayHistory *) malloc(sizeof(struct delayHistory));
     delayHistory->key = groupDelay->arrivalTimeMs - firstArrivalTimeMs;
     delayHistory->value = smoothedDelay;
-
+    delayHistory->next = NULL;
+    addDelayData(delayHistory);
     if (getDelayHistoryCount() > 20) {
         //保持样本数量为20个
         delFirstNode();
@@ -280,7 +286,8 @@ char getChangeState(struct PacketGroupDelay *groupDelay) {
         if (trend != 0.0) {
             int usage = detect(trend, groupDelay->sendDelta, groupDelay->arrivalTimeMs);
             result = getBitrateChange(usage);
-//                    log.info("TreadCalculater state=" + usage + "-----change=" + result + "---delayHistory size=" + delayHistory.size() + "------delayMs=" + delayMs);
+            //result = result - '0';
+            log_info("TreadCalculater state= %d  change= %d  delayHistory size = %d delayMs= %d",usage,result - '0',getDelayHistoryCount(),delayMs);
         }
     }
     pthread_mutex_unlock(&trendCalculaterMutex);

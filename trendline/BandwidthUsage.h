@@ -4,9 +4,10 @@
 
 #ifndef CLIENT_TEST_BANDWIDTHUSAGE_H
 #define CLIENT_TEST_BANDWIDTHUSAGE_H
+
 enum BandwidthUsage{
-    UNDERUSING = 1,
-    NORMAL = 2,
-    OVERUSING = 3
+    UNDERUSING = 0,
+    NORMAL = 1,
+    OVERUSING = 2
 };
 #endif //CLIENT_TEST_BANDWIDTHUSAGE_H

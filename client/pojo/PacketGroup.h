@@ -13,7 +13,7 @@ struct PacketIds{
 
 struct PacketGroup{
     //包组第一个接收到的分包 的到达时间戳
-     int firstArrivalPacketTimestamp;
+    int firstArrivalPacketTimestamp;
 
     //包组第一个分包发送时间戳
      int firstSentPacketTimestamp;

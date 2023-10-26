@@ -10,8 +10,8 @@
 #include<string.h>
 #include "../../log/log.h"
 
-#define ServerHost "47.103.69.132"
-//#define ServerHost "192.168.50.100"
+//#define ServerHost "47.103.69.132"
+#define ServerHost "192.168.50.100"
 #define ServerTcpPort  8173
 int sock;
 int tcpInit(){
@@ -21,10 +21,9 @@ int tcpInit(){
     sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     unsigned optVal;
     int optLen = sizeof(int);
-    int bufSize = 1024 * 1024 * 20;
+    int bufSize = 1024 * 1024 * 40;
+    //设置接收缓冲区
     setsockopt(sock,SOL_SOCKET,SO_RCVBUF,&bufSize,sizeof(int));
-    getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&optVal, &optLen);
-    log_info("Udp Buffer length: %d\n", optVal);
     //向服务器发起请求
     struct sockaddr_in sockAddr;
     memset(&sockAddr, 0, sizeof(sockAddr));  //每个字节都用0填充

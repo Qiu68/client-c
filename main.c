@@ -51,11 +51,12 @@ FILE *logFd;
 
 int main() {
 
-//    logFd = fopen("d://2/client.txt", "ab");
-//    if(logFd == NULL) {
-//        return -1;
-//    }
-//    log_add_fp(logFd,LOG_INFO);
+    logFd = fopen("/home/test/client.log", "ab");
+    if(logFd == NULL) {
+        printf("logfd error!");
+        return -1;
+    }
+    log_add_fp(logFd,LOG_INFO);
 
 
     pthread_mutex_init(&packetCountMutex,NULL);
@@ -66,9 +67,9 @@ int main() {
     pthread_mutex_init(&trendCalculaterMutex,NULL);
 
     clientInit();
-    getDescribe(106ll);
+    getDescribe(101ll);
     setStartFrameIndex(1);
-    setResourceId(106ll);
+    setResourceId(101ll);
     startPlay(1);
     initTask();
     checkRetryInit();
@@ -77,8 +78,7 @@ int main() {
     pthread_join(udpTask,NULL);
     pthread_join(frameCheckTask,NULL);
     pthread_join(retryTask,NULL);
-
-
+   
     return 0;
 
 }

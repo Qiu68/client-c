@@ -42,12 +42,15 @@ struct PacketGroup* getPacketGroup(int groupIndex){
     }
 
     struct PacketGroup *tmp = packetGroupList;
+    log_info("getPacketGroup 111");
     while (NULL != tmp){
         if(tmp->groupIndex == groupIndex){
+            log_info("getPacketGroup 222");
             return tmp;
         }
         tmp = tmp->next;
     }
+    log_info("getPacketGroup 222");
     return NULL;
 }
 
