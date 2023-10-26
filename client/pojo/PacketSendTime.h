@@ -1,0 +1,4 @@
+struct PacketSendTime
+{
+    int sendTime;
+};

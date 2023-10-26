@@ -115,9 +115,6 @@ char calculateLevel(struct bitrateChangeState *list,int count) {
 
     double levelTmp = (changeCount / (double)(count)) * 100;
     log_info("delayState = %d  changCount = %d  count = %d",(int)levelTmp,changeCount,count);
-//    BigDecimal level = new BigDecimal(String.valueOf(changeCount)).divide(new
-//    BigDecimal(String.valueOf(count)), 2, BigDecimal.ROUND_HALF_UP).multiply(new
-//    BigDecimal("100"));
     level = (int) levelTmp;
     if (level == 0 && count <= 10){
         log_info("level = %d",50);
@@ -261,21 +258,26 @@ char getChangeState(struct PacketGroupDelay *groupDelay) {
         firstArrivalTimeMs = groupDelay->arrivalTimeMs;
     }
 
+    
+
     groupCount++;
     groupCount = MIN(groupCount, 1000);
 
     //包组延时
     int delayMs = groupDelay->recvDelta - groupDelay->sendDelta;
     accumulatedDelay += delayMs;
-    log_info("recvDelta = %d  sendDelta = %d accumulatedDelay = %lf",groupDelay->recvDelta,groupDelay->sendDelta,accumulatedDelay);
+    //log_info("recvDelta = %d  sendDelta = %d accumulatedDelay = %lf",groupDelay->recvDelta,groupDelay->sendDelta,accumulatedDelay);
 
     //对包组延时做平滑处理    平滑延迟公式 = 平滑系数 * 平滑延迟 + (1 - 平滑系数) * 累积的延迟
     smoothedDelay = SMOOTHING_COEF * smoothedDelay + (1 - SMOOTHING_COEF) * accumulatedDelay;
     struct delayHistory *delayHistory = (struct delayHistory *) malloc(sizeof(struct delayHistory));
     delayHistory->key = groupDelay->arrivalTimeMs - firstArrivalTimeMs;
+    
+    
     delayHistory->value = smoothedDelay;
     delayHistory->next = NULL;
     addDelayData(delayHistory);
+    //log_info("------ key = %d value ------ = %lf",delayHistory->key,delayHistory->value);
     if (getDelayHistoryCount() > 20) {
         //保持样本数量为20个
         delFirstNode();
@@ -283,12 +285,12 @@ char getChangeState(struct PacketGroupDelay *groupDelay) {
     if (getDelayHistoryCount() == 20) {
         //样本数量达到20个  开始计算斜率
         double trend = linearFitSlope(delayHistoryHead);
-        if (trend != 0.0) {
-            int usage = detect(trend, groupDelay->sendDelta, groupDelay->arrivalTimeMs);
-            result = getBitrateChange(usage);
+    
+        int usage = detect(trend, groupDelay->sendDelta, groupDelay->arrivalTimeMs);
+        result = getBitrateChange(usage);
             //result = result - '0';
-            log_info("TreadCalculater state= %d  change= %d  delayHistory size = %d delayMs= %d",usage,result - '0',getDelayHistoryCount(),delayMs);
-        }
+        //log_info("TreadCalculater state= %d  change= %d  delayHistory size = %d delayMs= %d",usage,result - '0',getDelayHistoryCount(),delayMs);
+    
     }
     pthread_mutex_unlock(&trendCalculaterMutex);
     return result;
@@ -345,9 +347,12 @@ double linearFitSlope(struct delayHistory *list) {
     tmp = list;
     while(tmp != NULL){
         numerator += (tmp->key - avgX) * (tmp->value - avgY);
-        denominator += (tmp->key- avgX) * (tmp->value- avgX);
+        denominator += (tmp->key- avgX) * (tmp->key- avgX);
         tmp = tmp->next;
     }
+    
+  
+    
     if (denominator == 0) {
         return 0.0;
     }

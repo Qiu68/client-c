@@ -14,7 +14,7 @@ struct Packet{
     //服务器发送这个包的时间戳
     int sendTime;
     //客户端接收到这个包的时间戳
-    long long revTime;
+    int revTime;
 
     struct Packet *next;
 };

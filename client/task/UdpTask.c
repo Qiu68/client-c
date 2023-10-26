@@ -18,6 +18,7 @@
 #include "../pojo/Packet.h"
 #include "../pojo/Frame.h"
 #include "checkFramTask.h"
+#include "../pojo/PacketSendTime.h"
 #include "../pojo/PacketGroup.h"
 
 #define pf printf
@@ -46,6 +47,8 @@ void intToString(char src[],int num);
 int addPacketGroup(struct PacketGroup *packetGroup);
 
 int sendPacketGroupMsg(int msgID,void* data,int size);
+int sendMsg(int msgID,void* data,int size);
+int tcpRevMsg(int msgId,void* data);
 
 extern struct sockaddr_in addr;
 extern int udpSockFd;
@@ -64,6 +67,8 @@ extern long long oldNowPingTimestamp;
 extern long long oldPrevPingTimestamp;
 extern int fileFrameCount;
 
+extern int tcpThreadMsgId;
+
 int udpListenerFlag = 1;
 int revPackageCount = 0;
 //统计一个两个ping之间接收到的包数
@@ -79,6 +84,8 @@ int nowPacketOrder;
 struct Frame *frame;
 
 int packetGroupMsgId = -1;
+int packetSendTimeMsgId = -1;
+int udpThreadMsgId = -1;
 long long revTime = 0ll;
 
 struct PacketGroup *nowPacketGroup = NULL;
@@ -126,6 +133,18 @@ void udpListenerInit() {
 
     packetGroupMsgId = msgget((key_t) 1000, 0664 | IPC_CREAT);//获取消息队列
     if (packetGroupMsgId == -1) {
+        log_error("msgget err");
+        exit(-1);
+    }
+
+    packetSendTimeMsgId = msgget((key_t) 1001, 0664 | IPC_CREAT);//获取消息队列
+    if (packetSendTimeMsgId == -1) {
+        log_error("msgget err");
+        exit(-1);
+    }
+
+     udpThreadMsgId = msgget((key_t) 1002, 0664 | IPC_CREAT);//获取消息队列
+    if (udpThreadMsgId == -1) {
         log_error("msgget err");
         exit(-1);
     }
@@ -479,7 +498,7 @@ void *udpListener(void *args) {
         log_info("------ udp 222 ------");
 
         int type = buf[0];
-
+        int rcvPacketCount = 0;
         switch (type) {
             //接收打洞端口
             case CLIENT_UDP_INIT_RESP: {
@@ -493,6 +512,22 @@ void *udpListener(void *args) {
 
                 //接收帧数据
             case FRAME: {
+                // ++rcvPacketCount;
+                // struct msgququeInfo *recvMsg;
+                // recvMsg = (struct msgququeInfo *) malloc(sizeof(struct msgququeInfo));
+                // int result = -1;
+                // result = tcpRevMsg(tcpThreadMsgId,recvMsg);
+                // if (result == 1)
+                // {
+                //     struct msgququeInfo *msg;
+                //     msg = (struct msgququeInfo *) malloc(sizeof(struct msgququeInfo));
+                //     msg->msg = rcvPacketCount;
+                //     sendMsg(udpThreadMsgId,(void*)msg,sizeof(struct msgququeInfo));
+                //     rcvPacketCount = 0;
+                // }
+                
+            
+
                 long long s = getTimeStampByUs();
             
                 struct FramePacket *framePacket;
@@ -503,6 +538,17 @@ void *udpListener(void *args) {
                 packetPtr->revTime = getSystemTimestamp() - revTime;
                 log_info("sendtime = %d rev time = %lld",packetPtr->sendTime,packetPtr->revTime);
                 packetPtr->next = NULL;
+                struct PacketSendTime *packetSendTime;
+                
+                 packetSendTime = (struct PacketSendTime *) malloc(sizeof(struct PacketSendTime));
+                 packetSendTime->sendTime = packetPtr->sendTime;
+                int result = sendPacketSendTimeMsg(packetSendTimeMsgId,(void *) packetSendTime,sizeof(struct PacketSendTime ));
+                if (result == -1)
+                {
+                    log_error("sendPacketSendTimeMsg error -1");
+                    exit(1);
+                }
+                
                 receiveTimeStamp = getSystemTimestamp();
                 if (clearTime == 0) {
                     clearTime = framePacket->sendTime;
@@ -580,7 +626,7 @@ void *udpListener(void *args) {
 
 //                long long start = getSystemTimestamp();
                 //log_info("udp 555");
-               clearTime =  delOutdatedPackets(framePacket,clearTime);
+               //clearTime =  delOutdatedPackets(framePacket,clearTime);
 //                log_info("调用delOutdatedPackets耗时 %ld",(getSystemTimestamp() - start));
                // log_info("udp 666");
                 nowFrameIndex = framePacket->frameIndex;
@@ -784,5 +830,6 @@ void *udpListener(void *args) {
         }
         log_info("------ udp 222 ------");
     }
+}
 }
 
