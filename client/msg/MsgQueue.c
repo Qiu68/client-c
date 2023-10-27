@@ -8,25 +8,25 @@
 
 
 int sendPacketGroupMsg(int msgID,void* data,int size){
-    if (msgsnd(msgID, data, size, 0) == -1) {
-        log_error("msgsnd err");
-        return -1;
+    if (msgsnd(msgID, data, size,  IPC_NOWAIT) == -1) {
+        log_error("sendPacketGroupMsg err");
+        exit(-1);
     }
     return 1;
 }
 
 int  revPacketGroupMsg(int msgId,void* data){
     if (msgrcv(msgId, (void *) data, BUFSIZ, 0, IPC_NOWAIT) == -1) {
-        log_error("msgrcv err");
+        log_error("revPacketGroupMsg err");
         return -1;
     }
     return 1;
 }
 
 int sendPacketSendTimeMsg(int msgID,void* data,int size){
-    if (msgsnd(msgID, data, size, 0) == -1) {
-        log_error("msgsnd err");
-        return -1;
+    if (msgsnd(msgID, data, size, IPC_NOWAIT) == -1) {
+        log_error("revPacketGroupMsg err");
+        exit(-1);
     }
     return 1;
 }

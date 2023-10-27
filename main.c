@@ -73,7 +73,7 @@ int main() {
     startPlay(1);
     initTask();
     checkRetryInit();
-
+    
     pthread_join(tcpTask,NULL);
     pthread_join(udpTask,NULL);
     pthread_join(frameCheckTask,NULL);

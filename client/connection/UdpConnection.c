@@ -19,7 +19,7 @@ int udpInit() {
     udpSockFd = socket(AF_INET, SOCK_DGRAM, 0);
     unsigned optVal;
     int optLen = sizeof(int);
-    int bufSize = 1024 * 1024 * 40;
+    int bufSize = 1024 * 1024 * 100;
     //设置接收缓冲区
     setsockopt(udpSockFd,SOL_SOCKET,SO_RCVBUF,&bufSize,sizeof(int));
 

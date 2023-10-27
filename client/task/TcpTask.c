@@ -217,8 +217,8 @@ void *tcpListener(void *args) {
                 nowPingTimestamp = p->timestamp - startTime;
                 //printf("timestamp=%lld -   startTime=%lld = %lld\n",p->timestamp,startTime,p->timestamp-startTime);
                 RTT = p->rtt;
-                log_info("------ seq=%d   rtt=%d   timestamp=%lld  nonPing=%lld------ \n", p->sequence, RTT,
-                         p->timestamp, nowPingTimestamp);
+               log_info("------ seq=%d   rtt=%d   timestamp=%lld  nonPing=%lld------ \n", p->sequence, RTT,
+                        p->timestamp, nowPingTimestamp);
                 //阻塞一个rtt时间
                 while (1) {
                     nowTime = getSystemTimestamp();
@@ -229,49 +229,13 @@ void *tcpListener(void *args) {
                     }
                 }
 
-                // struct  msgququeInfo *msg;
-                // msg = (struct msgququeInfo *) malloc(sizeof(struct msgququeInfo));
-                // msg->msg = 1;
-                // sendMsg(tcpThreadMsgId,(void*)msg,sizeof(struct msgququeInfo));
-                
-                // struct msgququeInfo *rcvMsg;
-                // rcvMsg = (struct msgququeInfo *) malloc(sizeof(struct msgququeInfo));
-                // udpRevMsg(udpThreadMsgId,rcvMsg);
-                // log_info("%d",rcvMsg->msg);
-
-                // struct Packet *point, *list, *ptr;
-                // point = head;
-                // int count = 0;
-
-                // //遍历链表 复制一份
-                // while (point != NULL) {
-                //     struct Packet *packet;
-                //     packet = (struct Packet *) malloc(sizeof(struct Packet));
-                //     packet->sendTime = point->sendTime;
-                //     packet->revTime = point->revTime;
-                //     if (list == NULL) {
-                //         list = packet;
-                //         ptr = packet;
-                //     } else {
-                //         ptr->next = packet;
-                //         ptr = ptr->next;
-                //     }
-                //     point = point->next;
-                // }
-                // if (ptr != NULL) {
-                //     ptr->next = NULL;
-                // }
-
-
-
-                //point = NULL;
-
 
                 int revPacketCount = 0;
                 // struct Packet *aidePoint;
                 // aidePoint = list;
 
                 long long start = getSystemTimestamp();
+                int count = 0;
                 struct PacketSendTime *pactketPtr = NULL;
                 // printf("------ seq=%d   prevPing=%lld   nowPing=%lld",p->sequence,prevPingTimestamp,nowPingTimestamp);
                 while (true) {
@@ -287,10 +251,13 @@ void *tcpListener(void *args) {
                     if (pactketPtr->sendTime >= prevPingTimestamp && pactketPtr->sendTime < nowPingTimestamp) {
                         ++revPacketCount;
                     }
+                    else{
+                        ++count;
+                    }
                     // aidePoint = aidePoint->next;
                 }
                 //printf("time:%ld\n",(getSystemTimestamp() - start));
-                log_info("------ revPacketCount %d------\n", revPacketCount);
+                log_info("------ revPacketCount %d    deadCount = %d ------\n", revPacketCount,count);
 
 //                free(ptr);
 //                free(list);
@@ -320,7 +287,7 @@ void *tcpListener(void *args) {
                                                                  prev->lastArrivalPacketTimestamp);
                             packetGroupDelay->next = NULL;
 
-                             log_info("  recvDelta  %d - sendDelta  %d = %d",packetGroupDelay->recvDelta,packetGroupDelay->sendDelta,packetGroupDelay->recvDelta - packetGroupDelay->sendDelta);
+                             //log_info("  recvDelta  %d - sendDelta  %d = %d",packetGroupDelay->recvDelta,packetGroupDelay->sendDelta,packetGroupDelay->recvDelta - packetGroupDelay->sendDelta);
 
                             //调试临时赋值
                              //packetGroupDelay->recvDelta = packetGroupDelay->sendDelta - 1;
@@ -331,6 +298,7 @@ void *tcpListener(void *args) {
                     }
 
                 }
+
                 int level = 0;
                 //TODO 斜率计算有问题，一直重复一个值
                 char delayChangeLevel = calculate(groupDelayList);

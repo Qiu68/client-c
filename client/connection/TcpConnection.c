@@ -21,7 +21,7 @@ int tcpInit(){
     sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     unsigned optVal;
     int optLen = sizeof(int);
-    int bufSize = 1024 * 1024 * 40;
+    int bufSize = 1024 * 1024 * 100;
     //设置接收缓冲区
     setsockopt(sock,SOL_SOCKET,SO_RCVBUF,&bufSize,sizeof(int));
     //向服务器发起请求

@@ -72,7 +72,7 @@ extern int tcpThreadMsgId;
 int udpListenerFlag = 1;
 int revPackageCount = 0;
 //统计一个两个ping之间接收到的包数
-struct Packet *head, *p, *packetPtr;
+struct Packet *head, *p, packetPtr;
 
 long long receiveTimeStamp = 0ll;
 int beforeFrameIndex = 0;
@@ -143,6 +143,23 @@ void udpListenerInit() {
         exit(-1);
     }
 
+    
+    struct msqid_ds msqidDs;
+    if(msgctl(packetSendTimeMsgId,IPC_STAT,&msqidDs) == -1){
+        perror("msgctl error 1");
+        exit(-1);
+    }
+    //所属权限
+    msqidDs.msg_perm.mode = 0777;
+    //消息最大字节数
+    msqidDs.msg_qbytes = 65535 * 10;
+
+    if (-1 == msgctl(packetSendTimeMsgId, IPC_SET, &msqidDs)){
+        perror("msgctl error 2");
+        exit(1);
+    }
+
+
      udpThreadMsgId = msgget((key_t) 1002, 0664 | IPC_CREAT);//获取消息队列
     if (udpThreadMsgId == -1) {
         log_error("msgget err");
@@ -151,6 +168,7 @@ void udpListenerInit() {
 
     nowPacketGroup = (struct PacketGroup*) malloc(sizeof (struct PacketGroup));
     nowPacketGroup->lastSentPacketTimestamp = 0;
+    getTimeStampByUs();
     nowPacketGroup->lastArrivalPacketTimestamp = 0;
     nowPacketGroup->packageCount = 0;
     nowPacketGroup->firstArrivalPacketTimestamp = 0;
@@ -185,7 +203,7 @@ int addPacket(struct framePacket *package) {
         ptr = frame->packetNode;
 
         //检查是否重复 不重复移动到链表尾部
-        log_info("udp 111 循环开始");
+        //log_info("udp 111 循环开始");
         while (ptr->next != NULL) {
             if (ptr->packageIndex == framePacket->packageIndex) {
                 log_info("udp 111 循环退出");
@@ -194,7 +212,7 @@ int addPacket(struct framePacket *package) {
             }
             ptr = ptr->next;
         }
-        log_info("udp 111 循环退出");
+        //log_info("udp 111 循环退出");
         //将新的分包升序插入包组链表
         ptr = frame->packetNode;
         if (data->packageIndex < ptr->packageIndex) {
@@ -205,19 +223,19 @@ int addPacket(struct framePacket *package) {
 
         struct packetData *tmp;
         tmp = ptr->next;
-        log_info("udp 222 循环开始");
+        //log_info("udp 222 循环开始");
         while (NULL != tmp) {
             if (data->packageIndex < tmp->packageIndex) {
                 // 插入指定位置
                 ptr->next = data;
                 data->next = tmp;
-                log_info("udp 222 循环退出");
+               // log_info("udp 222 循环退出");
                 return 1;
             }
             tmp = tmp->next;
             ptr = ptr->next;
         }
-        log_info("udp 222 循环退出");
+        //log_info("udp 222 循环退出");
 
         ptr->next = data;
     }
@@ -306,16 +324,16 @@ int addLossPacket(struct Frame *aFrame, int i) {
         struct lossPacket *ptr;
         ptr = aFrame->lossPacketNode;
         //检查是否重复 不重复移动到链表尾部
-        log_info("udp 555 循环开始");
+        //log_info("udp 555 循环开始");
         while (ptr->next != NULL) {
             if (ptr->id == i) {
-                log_info("udp 555 循环退出");
+               // log_info("udp 555 循环退出");
                 //已经存在
                 return -1;
             }
             ptr = ptr->next;
         }
-        log_info("udp 555 循环退出");
+        //log_info("udp 555 循环退出");
 
         ptr->next = lossPacket;
         ptr = lossPacket;
@@ -410,95 +428,98 @@ int packetProcess(struct FramePacket *package) {
 
 }
 
-long long  delOutdatedPackets(struct FramePacket *framePacket,long long time){
-    //上锁
-    log_info("delOutdatedPackets 获取锁");
-    pthread_mutex_lock(&packetCountMutex);
-    log_info("delOutdatedPackets 获取锁成功");
-    if (head == NULL) {
-        head = packetPtr;
-        p = packetPtr;
-    } else {
-        p->next = packetPtr;
-        p = p->next;
-    }
+// long long  delOutdatedPackets(struct FramePacket *framePacket,long long time){
+//     //上锁
+//     log_info("delOutdatedPackets 获取锁");
+//     pthread_mutex_lock(&packetCountMutex);
+//     log_info("delOutdatedPackets 获取锁成功");
+//     if (head == NULL) {
+//         head = packetPtr;
+//         p = packetPtr;
+//     } else {
+//         p->next = packetPtr;
+//         p = p->next;
+//     }
 
-    struct Packet *point, *aide;
-    int count = 0;
-    point = aide = head;
-    //5秒清理掉没用的数据
-    //printf("111111111111111\n");
-    if (framePacket->sendTime - time >= 5000) {
-        log_info("udp 888 循环开始");
-        while (point != NULL) {
-            if (point->sendTime < oldPrevPingTimestamp) {
+//     struct Packet *point, *aide;
+//     int count = 0;
+//     point = aide = head;
+//     //5秒清理掉没用的数据
+//     //printf("111111111111111\n");
+//     if (framePacket->sendTime - time >= 5000) {
+//         log_info("udp 888 循环开始");
+//         while (point != NULL) {
+//             if (point->sendTime < oldPrevPingTimestamp) {
 
-                //移除首节点
-                if (head == point) {
-                    //链表只有一个节点的情况
-                    if (head->next == NULL) {
-                        head = NULL;
-                    } else {
-                        head = head->next;
-                    }
-                }
+//                 //移除首节点
+//                 if (head == point) {
+//                     //链表只有一个节点的情况
+//                     if (head->next == NULL) {
+//                         head = NULL;
+//                     } else {
+//                         head = head->next;
+//                     }
+//                 }
 
-                    //移除尾结点
-                else if (point->next == NULL) {
-                    log_info("udp 999 循环开始");
-                    //遍历到ptr节点的上一个节点
-                    while (aide->next != point) {
-                        aide = aide->next;
-                    }
-                    log_info("udp 999 循环退出");
-                    //断开与ptr的连接
-                    aide->next = NULL;
-                }
+//                     //移除尾结点
+//                 else if (point->next == NULL) {
+//                     log_info("udp 999 循环开始");
+//                     //遍历到ptr节点的上一个节点
+//                     while (aide->next != point) {
+//                         aide = aide->next;
+//                     }
+//                     log_info("udp 999 循环退出");
+//                     //断开与ptr的连接
+//                     aide->next = NULL;
+//                 }
 
-                    //中间节点
-                else {
-                    log_info("udp 2-111 循环开始");
-                    //遍历到ptr节点的上一个节点
-                    while (aide->next != point) {
-                        aide = aide->next;
-                    }
-                    log_info("udp 2-111 循环退出");
-                    aide->next = point->next;
-                }
-                aide = NULL;
-                count++;
-            }
-            point = point->next;
-        }
-        log_info("udp 888 循环退出");
-        log_info("------ 清理%d个数据 ------\n", count);
-        time = 0;
-    }
+//                     //中间节点
+//                 else {
+//                     log_info("udp 2-111 循环开始");
+//                     //遍历到ptr节点的上一个节点
+//                     while (aide->next != point) {
+//                         aide = aide->next;
+//                     }
+//                     log_info("udp 2-111 循环退出");
+//                     aide->next = point->next;
+//                 }
+//                 aide = NULL;
+//                 count++;
+//             }
+//             point = point->next;
+//         }
+//         log_info("udp 888 循环退出");
+//         log_info("------ 清理%d个数据 ------\n", count);
+//         time = 0;
+//     }
 
-    pthread_mutex_unlock(&packetCountMutex);
-    log_info("delOutdatedPackets 释放锁成功");
-    return time;
+//     pthread_mutex_unlock(&packetCountMutex);
+//     log_info("delOutdatedPackets 释放锁成功");
+//     return time;
 
-}
+// }
 
 void *udpListener(void *args) {
     char buf[1500];
     long long clearTime = 0l;
     long lastFrameLengthCount = 0l;
     long long prevPrintTime = getSystemTimestamp();
-
-
-
+    long long printTime = 0ll;
+    struct PacketSendTime packetSendTimeArr[15];
+    int bufCount = 0;
 
     while (udpListenerFlag) {
-
-        log_info("------ udp 111 ------");
+        //long long s = getTimeStampByUs();
+        //log_info("------ udp 111 ------");
         socklen_t len = sizeof(addr);
         int length = recvfrom(udpSockFd, &buf, sizeof(buf), 0, (struct sockaddr *) &addr, &len);
-        log_info("------ udp 222 ------");
+       // log_info("------ udp 222 ------");
+       //log_info("loop time = %lld",(getTimeStampByUs() - s));
 
         int type = buf[0];
         int rcvPacketCount = 0;
+        
+        
         switch (type) {
             //接收打洞端口
             case CLIENT_UDP_INIT_RESP: {
@@ -512,42 +533,21 @@ void *udpListener(void *args) {
 
                 //接收帧数据
             case FRAME: {
-                // ++rcvPacketCount;
-                // struct msgququeInfo *recvMsg;
-                // recvMsg = (struct msgququeInfo *) malloc(sizeof(struct msgququeInfo));
-                // int result = -1;
-                // result = tcpRevMsg(tcpThreadMsgId,recvMsg);
-                // if (result == 1)
-                // {
-                //     struct msgququeInfo *msg;
-                //     msg = (struct msgququeInfo *) malloc(sizeof(struct msgququeInfo));
-                //     msg->msg = rcvPacketCount;
-                //     sendMsg(udpThreadMsgId,(void*)msg,sizeof(struct msgququeInfo));
-                //     rcvPacketCount = 0;
-                // }
-                
-            
-
-                long long s = getTimeStampByUs();
-            
+               
                 struct FramePacket *framePacket;
-                packetPtr = (struct Packet *) malloc(sizeof(struct Packet));
+                //packetPtr = (struct Packet *) malloc(sizeof(struct Packet));
 
                 framePacket = FramePacketDecode(buf, length);
-                packetPtr->sendTime = framePacket->sendTime;
-                packetPtr->revTime = getSystemTimestamp() - revTime;
-                log_info("sendtime = %d rev time = %lld",packetPtr->sendTime,packetPtr->revTime);
-                packetPtr->next = NULL;
-                struct PacketSendTime *packetSendTime;
-                
-                 packetSendTime = (struct PacketSendTime *) malloc(sizeof(struct PacketSendTime));
-                 packetSendTime->sendTime = packetPtr->sendTime;
-                int result = sendPacketSendTimeMsg(packetSendTimeMsgId,(void *) packetSendTime,sizeof(struct PacketSendTime ));
-                if (result == -1)
-                {
-                    log_error("sendPacketSendTimeMsg error -1");
-                    exit(1);
-                }
+                packetPtr.sendTime = framePacket->sendTime;
+                packetPtr.revTime = getSystemTimestamp() - revTime;
+                //log_info("sendtime = %d rev time = %lld",packetPtr->sendTime,packetPtr->revTime);
+                //packetPtrnext = NULL;
+    
+                struct PacketSendTime packetSendTime;
+                 //packetSendTime = (struct PacketSendTime *) malloc(sizeof(struct PacketSendTime));
+                 packetSendTime.sendTime = packetPtr.sendTime;
+ 
+                 sendPacketSendTimeMsg(packetSendTimeMsgId,(void *)&packetSendTime,sizeof(struct PacketSendTime ));
                 
                 receiveTimeStamp = getSystemTimestamp();
                 if (clearTime == 0) {
@@ -556,25 +556,29 @@ void *udpListener(void *args) {
 
                 //char packetId[] = framePacket->frameIndex + framePacket->packageIndex +framePacket->sendTime;
 
+                if(framePacket->packageIndex == 1){
+                    log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  ------\n",
+                         framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength);     
+                }
 
-//                long long start = getSystemTimestamp();
+          
                 int groupIndex = framePacket->sendTime / 5;
-               // log_info("------ udp 333 -----");
+
                 struct PacketGroup *packetGroup = getPacketGroup(groupIndex);
-               // log_info("------ udp 444 -----");
+      
 
                 if (NULL != packetGroup) {
-                    packetGroup->lastArrivalPacketTimestamp = packetPtr->revTime > packetGroup->lastArrivalPacketTimestamp
-                                                              ? packetPtr->revTime:packetGroup->lastArrivalPacketTimestamp;
-                    packetGroup->lastSentPacketTimestamp = packetPtr->sendTime > packetGroup->lastSentPacketTimestamp
-                                                              ?packetPtr->sendTime : packetGroup->lastSentPacketTimestamp;
+                    packetGroup->lastArrivalPacketTimestamp = packetPtr.revTime > packetGroup->lastArrivalPacketTimestamp
+                                                              ? packetPtr.revTime:packetGroup->lastArrivalPacketTimestamp;
+                    packetGroup->lastSentPacketTimestamp = packetPtr.sendTime > packetGroup->lastSentPacketTimestamp
+                                                              ?packetPtr.sendTime : packetGroup->lastSentPacketTimestamp;
                     packetGroup->packageCount = (packetGroup->packageCount) + 1;
                 }
 
                 if (nowPacketGroup->firstArrivalPacketTimestamp == 0) {
                     nowPacketGroup->firstSentPacketTimestamp = framePacket->sendTime;
-                    nowPacketGroup->firstArrivalPacketTimestamp = packetPtr->revTime;
-                    nowPacketGroup->lastArrivalPacketTimestamp = packetPtr->revTime;
+                    nowPacketGroup->firstArrivalPacketTimestamp = packetPtr.revTime;
+                    nowPacketGroup->lastArrivalPacketTimestamp = packetPtr.revTime;
                     //得到包组下标
                     nowPacketGroup->groupIndex = framePacket->sendTime / 5;
                     nowPacketGroup->lastSentPacketTimestamp = framePacket->sendTime;
@@ -586,18 +590,16 @@ void *udpListener(void *args) {
                 //5ms内接收的包为一个包组
                 if ((framePacket->sendTime / 5) == nowPacketGroup->groupIndex) {
 //
-                    nowPacketGroup->lastArrivalPacketTimestamp = nowPacketGroup->lastArrivalPacketTimestamp > packetPtr->revTime
-                                                                    ? nowPacketGroup->lastArrivalPacketTimestamp : packetPtr->revTime;
+                    nowPacketGroup->lastArrivalPacketTimestamp = nowPacketGroup->lastArrivalPacketTimestamp > packetPtr.revTime
+                                                                    ? nowPacketGroup->lastArrivalPacketTimestamp : packetPtr.revTime;
 
-                    nowPacketGroup->lastSentPacketTimestamp = nowPacketGroup->lastSentPacketTimestamp > packetPtr->sendTime
-                                                                    ? nowPacketGroup->lastSentPacketTimestamp : packetPtr->sendTime;
+                    nowPacketGroup->lastSentPacketTimestamp = nowPacketGroup->lastSentPacketTimestamp > packetPtr.sendTime
+                                                                    ? nowPacketGroup->lastSentPacketTimestamp : packetPtr.sendTime;
                     nowPacketGroup->packageCount = (nowPacketGroup->packageCount) + 1;
                     nowPacketGroup->next = NULL;
                     //nowPacketGroup.packages.add(packetID);
                 } else {
                     if (beforePacketGroup != NULL) {
-                        //packetGroupMap.put(nowPacketGroup.groupIndex, nowPacketGroup);
-                        //addPacketGroup(nowPacketGroup);
                         int result = sendPacketGroupMsg(packetGroupMsgId,(void *)nowPacketGroup,sizeof (struct PacketGroup));
                         if (result == -1){
                             exit(-1);
@@ -608,11 +610,11 @@ void *udpListener(void *args) {
 
                     //nowPacketGroup = new PacketGroup();
                     nowPacketGroup = (struct PacketGroup*) malloc(sizeof (struct PacketGroup));
-                    nowPacketGroup->firstArrivalPacketTimestamp = packetPtr->revTime;
-                    nowPacketGroup->firstSentPacketTimestamp = packetPtr->sendTime;
+                    nowPacketGroup->firstArrivalPacketTimestamp = packetPtr.revTime;
+                    nowPacketGroup->firstSentPacketTimestamp = packetPtr.sendTime;
 
-                    nowPacketGroup->lastArrivalPacketTimestamp = packetPtr->revTime;
-                    nowPacketGroup->lastSentPacketTimestamp = packetPtr->sendTime;
+                    nowPacketGroup->lastArrivalPacketTimestamp = packetPtr.revTime;
+                    nowPacketGroup->lastSentPacketTimestamp = packetPtr.sendTime;
                     nowPacketGroup->groupIndex = framePacket->sendTime / 5;
                     nowPacketGroup->packageCount++;
                     //nowPacketGroup->packages.add(packetID);
@@ -629,6 +631,10 @@ void *udpListener(void *args) {
                //clearTime =  delOutdatedPackets(framePacket,clearTime);
 //                log_info("调用delOutdatedPackets耗时 %ld",(getSystemTimestamp() - start));
                // log_info("udp 666");
+
+
+
+
                 nowFrameIndex = framePacket->frameIndex;
                 if (framePacket->frameIndex == 1) {
                     nowPacketTimestamp = getSystemTimestamp();
@@ -655,16 +661,12 @@ void *udpListener(void *args) {
                 int packetCount = (framePacket->frameLength + 8) % (packageSize - 25)
                                   == 0 ? (framePacket->frameLength + 8) / (packageSize - 25)
                                        : ((framePacket->frameLength + 8) / (packageSize - 25)) + 1;
-//                if (getSystemTimestamp() - prevPrintTime > 1000){
-//                    log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  packetCount = %d  ------\n",
-//                             framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength, packetCount);
-//                    prevPrintTime = getSystemTimestamp();
-//                }
+            
 
-                log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  packetCount = %d  ------\n",
-                         framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength, packetCount);
+                // log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  packetCount = %d  ------\n",
+                //          framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength, packetCount);
 
-               // fflush(stdout);
+               fflush(stdout);
 
                 if (framePacket->frameIndex != beforeFrameIndex) {
                     nowPacketTimestamp = getSystemTimestamp();
@@ -674,9 +676,7 @@ void *udpListener(void *args) {
                     //TODO 断网重传
                 }
 
-                //                if (framePacket->frameIndex == 4){
-                //                    printf("test\n");
-                //                }
+        
                 //同一帧其他分包
                 if (framePacket->frameIndex == beforeFrameIndex) {
                     packetProcess(framePacket);
@@ -712,7 +712,7 @@ void *udpListener(void *args) {
                     if (frame != NULL) {
                         addFrame(frame);
                     }
-                    log_info("udp 2-222 循环开始");
+                    //log_info("udp 2-222 循环开始");
                     for (int i = beforeFrameIndex + 1; i < framePacket->frameIndex; ++i) {
                         struct Frame *aFrame;
                         aFrame = (struct Frame *) malloc(sizeof(struct Frame));
@@ -729,7 +729,7 @@ void *udpListener(void *args) {
                         addLossPacket(aFrame, 0);
                         beforePacketOrder = nowPacketOrder;
                     }
-                    log_info("udp 2-222 循环退出");
+                    //log_info("udp 2-222 循环退出");
                     frame = (struct Frame *) malloc(sizeof(struct Frame));
                     frame->frameIndex = framePacket->frameIndex;
                     frame->frameLength = framePacket->frameLength;
@@ -754,7 +754,7 @@ void *udpListener(void *args) {
                        framePacket->packageIndex);
 
                     if (frameFlagArr[framePacket->frameIndex] == framePacket->frameIndex) {
-//                
+               
                         struct Frame *s =  getInCompleteFrameByFrameIndex(framePacket->frameIndex);
                         if (NULL != s) {
                             deleteFrameInComplete(framePacket->frameIndex);
@@ -766,13 +766,13 @@ void *udpListener(void *args) {
 
                   
                     struct Frame *lossFrame = getInCompleteFrameByFrameIndex(framePacket->frameIndex);
-//                
+                
 
 
                     if (NULL == lossFrame) {
-//                     
+                    
                         lossFrame = getCompleteFrameByFrameIndex(framePacket->frameIndex);
-//
+
                     }
 
                     if (NULL == lossFrame) {
@@ -800,9 +800,9 @@ void *udpListener(void *args) {
                     lossFrame->packetSum = packetCount;
                     //
                     addPacketByFrame(lossFrame, framePacket);
-                    log_info("------ frameIndex = %d  frameLength = %d  packetLengthSum = %d  packetSum = %d ------ \n",
-                       lossFrame->frameIndex, lossFrame->frameLength,
-                       packetSumLength(lossFrame), lossFrame->packetSum);
+                    //log_info("------ frameIndex = %d  frameLength = %d  packetLengthSum = %d  packetSum = %d ------ \n",
+                    //    lossFrame->frameIndex, lossFrame->frameLength,
+                    //    packetSumLength(lossFrame), lossFrame->packetSum);
 
 
                     if (NULL != lossFrame->lossPacketNode) {
@@ -811,9 +811,13 @@ void *udpListener(void *args) {
                     }
                  
                     addFrame(lossFrame);
-              
+            
 
-                log_info("udp 444");
+                //跳出 case Frame
+                break;
+            }
+
+               //log_info("udp 444");
                 //最后一帧
                 if (framePacket->frameIndex == fileFrameCount) {
                     lastFrameLengthCount = lastFrameLengthCount + framePacket->dataLength;
@@ -822,14 +826,13 @@ void *udpListener(void *args) {
                     }
 
                 }
-                //跳出 case Frame
-                break;
-            }
-            default:
-                log_info("rev udp other msg %d",type);
+          
         }
-        log_info("------ udp 222 ------");
+          default:
+                //log_info("rev udp other msg %d",type);
+        //log_info("------ udp 222 ------");
     }
-}
+    
 }
 
+}
