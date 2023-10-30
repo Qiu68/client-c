@@ -173,7 +173,7 @@ struct Frame *getCompleteFrameByFrameIndex(int frameIndex) {
 
 int addFrameInComplete(struct Frame *frame) {
 
-
+    log_info("addFrameInComplete frameIndex = %d",frame->frameIndex);
     //log_info("------ addFrameInComplete 获取锁 ------\n");
 //    fflush(stdout);
     struct Frame *tmp;
@@ -183,26 +183,20 @@ int addFrameInComplete(struct Frame *frame) {
     tmp = (struct Frame *) malloc(sizeof(struct Frame));
     memcpy(tmp, frame, sizeof(struct Frame));
     tmp->next = NULL;
-    if (NULL == frameInCompleteList) {
-        frameInCompleteList = tmp;
-        frameInCompleteTail = tmp;
-        frameInCompleteList->next = NULL;
-    } else {
-        struct Frame *aide;
-        aide = frameInCompleteList;
-        while (aide->next != NULL) {
-            //去除
-            if (aide->next->frameIndex == tmp->frameIndex) {
-                pthread_mutex_unlock(&frameInCompleteMutex);
-//                printf("------ addFrameInComplete 释放锁 ------\n");
-//                fflush(stdout);
-                return -1;
-            }
-            aide = aide->next;
-        }
-        aide->next = tmp;
-    }
+    
+    struct Frame *aide = (struct Frame *) malloc(sizeof(struct Frame));
 
+    while (aide != NULL){
+        if (aide->frameIndex == tmp->frameIndex)
+        {
+           log_info("frameIndex = %d 重复添加",tmp->frameIndex);
+           return -1;
+        }
+        aide = aide->next;
+    }
+    
+    //添加到链表末尾
+    aide = tmp;
 
     pthread_mutex_unlock(&frameInCompleteMutex);
     log_info("------ addFrameInComplete 释放锁 ------\n");
@@ -212,6 +206,7 @@ int addFrameInComplete(struct Frame *frame) {
 
 
 int deleteFrameInComplete(int frameIndex) {
+    log_info("deleteFrameInComplete frameIndex = %d",frameIndex);
     //log_info("------ deleteFrameInComplete  获取锁 ------ \n");
 //    fflush(stdout);
     struct Frame *aide;
@@ -235,33 +230,6 @@ int deleteFrameInComplete(int frameIndex) {
         //log_info("------ deleteFrameInComplete  释放锁成功 ------");
         return 1;
     }
-
-//        //移除尾结点
-//    else if (aide->next == NULL) {
-//        //遍历到ptr节点的上一个节点
-//        while (aide->next->frameIndex != frameIndex) {
-//            aide = aide->next;
-//        }
-//        //断开与ptr的连接
-//        aide->next = NULL;
-//    }
-//
-//        //中间节点
-//    else {
-//
-//        //遍历到ptr节点的上一个节点
-//        while (aide->next->frameIndex != frameIndex) {
-//            aide = aide->next;
-//        }
-//        struct Frame *tmp;
-//        tmp = aide;
-//        aide->next = tmp->next->next;
-//    }
-//    aide = NULL;
-//    pthread_mutex_unlock(&frameInCompleteMutex);
-////    printf("------ deleteFrameInComplete  释放锁 ------ \n");
-////    fflush(stdout);
-//    return 1;
 
     struct Frame *prev = frameInCompleteList;
     struct Frame *curr = prev->next;

@@ -109,6 +109,7 @@ void *retry(void *args) {
     while (1) {
 
         int size = frameInCompleteListSize();
+
 //        printf("frameInComplete size = %d\n",size);
 //        fflush(stdout);
         if (size == 0) {
@@ -129,8 +130,7 @@ void *retry(void *args) {
             }
         }
 
-        printf("------ frameInComplete size = %d ------\n",size);
-        fflush(stdout);
+        log_info("frameInCompleteSize = %d",size);
         struct Frame *frameTmp;
         frameTmp = frameInCompleteList;
 
@@ -218,7 +218,7 @@ void *retry(void *args) {
 
         printf("------ sleep 1 m ------ \n");
         fflush(stdout);
-        sleep(1);
+        sleep(0.1);
     }
 
     printf("------- 异常退出 ------ \n");

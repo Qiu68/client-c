@@ -243,9 +243,11 @@ int addPacket(struct framePacket *package) {
 }
 
 int addPacketByFrame(struct Frame *aFrame, struct framePacket *package) {
+   
     //struct packetData *data;
     struct FramePacket *framePacket;
     framePacket = package;
+     log_info("addPacketByFrame frameIndex = %d packageDatLength = %d",aFrame->frameIndex,framePacket->dataLength);
 
     nowPacketOrder = framePacket->packageIndex;
 
@@ -349,7 +351,7 @@ int delLossPacket(struct Frame *framePacket, int packageIndex) {
     }
     struct Frame *aide;
     aide = framePacket;
-
+    log_info("delLossPacket frameIndex = %d packageIndex = %d ",framePacket->frameIndex,packageIndex);
     //移除首节点
     if (aide->lossPacketNode->id == 0 || aide->lossPacketNode->id == packageIndex) {
         //链表只有一个节点的情况
@@ -428,77 +430,6 @@ int packetProcess(struct FramePacket *package) {
 
 }
 
-// long long  delOutdatedPackets(struct FramePacket *framePacket,long long time){
-//     //上锁
-//     log_info("delOutdatedPackets 获取锁");
-//     pthread_mutex_lock(&packetCountMutex);
-//     log_info("delOutdatedPackets 获取锁成功");
-//     if (head == NULL) {
-//         head = packetPtr;
-//         p = packetPtr;
-//     } else {
-//         p->next = packetPtr;
-//         p = p->next;
-//     }
-
-//     struct Packet *point, *aide;
-//     int count = 0;
-//     point = aide = head;
-//     //5秒清理掉没用的数据
-//     //printf("111111111111111\n");
-//     if (framePacket->sendTime - time >= 5000) {
-//         log_info("udp 888 循环开始");
-//         while (point != NULL) {
-//             if (point->sendTime < oldPrevPingTimestamp) {
-
-//                 //移除首节点
-//                 if (head == point) {
-//                     //链表只有一个节点的情况
-//                     if (head->next == NULL) {
-//                         head = NULL;
-//                     } else {
-//                         head = head->next;
-//                     }
-//                 }
-
-//                     //移除尾结点
-//                 else if (point->next == NULL) {
-//                     log_info("udp 999 循环开始");
-//                     //遍历到ptr节点的上一个节点
-//                     while (aide->next != point) {
-//                         aide = aide->next;
-//                     }
-//                     log_info("udp 999 循环退出");
-//                     //断开与ptr的连接
-//                     aide->next = NULL;
-//                 }
-
-//                     //中间节点
-//                 else {
-//                     log_info("udp 2-111 循环开始");
-//                     //遍历到ptr节点的上一个节点
-//                     while (aide->next != point) {
-//                         aide = aide->next;
-//                     }
-//                     log_info("udp 2-111 循环退出");
-//                     aide->next = point->next;
-//                 }
-//                 aide = NULL;
-//                 count++;
-//             }
-//             point = point->next;
-//         }
-//         log_info("udp 888 循环退出");
-//         log_info("------ 清理%d个数据 ------\n", count);
-//         time = 0;
-//     }
-
-//     pthread_mutex_unlock(&packetCountMutex);
-//     log_info("delOutdatedPackets 释放锁成功");
-//     return time;
-
-// }
-
 void *udpListener(void *args) {
     char buf[1500];
     long long clearTime = 0l;
@@ -556,10 +487,10 @@ void *udpListener(void *args) {
 
                 //char packetId[] = framePacket->frameIndex + framePacket->packageIndex +framePacket->sendTime;
 
-                if(framePacket->packageIndex == 1){
+                // if(framePacket->packageIndex == 1){
                     log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  ------\n",
                          framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength);     
-                }
+                // }
 
           
                 int groupIndex = framePacket->sendTime / 5;
@@ -623,16 +554,6 @@ void *udpListener(void *args) {
 
                 }
 //
-//                log_info("包组延迟计算耗时 = %lld",(getSystemTimestamp() - start));
-
-
-//                long long start = getSystemTimestamp();
-                //log_info("udp 555");
-               //clearTime =  delOutdatedPackets(framePacket,clearTime);
-//                log_info("调用delOutdatedPackets耗时 %ld",(getSystemTimestamp() - start));
-               // log_info("udp 666");
-
-
 
 
                 nowFrameIndex = framePacket->frameIndex;
