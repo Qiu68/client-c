@@ -47,7 +47,7 @@ int addFrame(struct Frame *frame) {
     //log_info("------ addFrame 获取锁 ------\n");
    pthread_mutex_lock(&frameMutex);
     //log_info("------ addFrame 获取锁成功 ------\n");
-    fflush(stdout);
+
     if (NULL == frameList) {
         frameList = frame;
         frameTail = frame;
@@ -172,35 +172,20 @@ struct Frame *getCompleteFrameByFrameIndex(int frameIndex) {
 
 
 int addFrameInComplete(struct Frame *frame) {
-
-    log_info("addFrameInComplete frameIndex = %d",frame->frameIndex);
-    //log_info("------ addFrameInComplete 获取锁 ------\n");
-//    fflush(stdout);
-    struct Frame *tmp;
-    pthread_mutex_lock(&frameInCompleteMutex);
-    //log_info("------ addFrameInComplete 获取锁成功 ------\n");
-    fflush(stdout);
-    tmp = (struct Frame *) malloc(sizeof(struct Frame));
-    memcpy(tmp, frame, sizeof(struct Frame));
-    tmp->next = NULL;
     
-    struct Frame *aide = (struct Frame *) malloc(sizeof(struct Frame));
+    log_info("frameIndex = %d 加入frameInComplete",frame->frameIndex);
+     pthread_mutex_lock(&frameInCompleteMutex);
 
-    while (aide != NULL){
-        if (aide->frameIndex == tmp->frameIndex)
-        {
-           log_info("frameIndex = %d 重复添加",tmp->frameIndex);
-           return -1;
-        }
-        aide = aide->next;
+    if (NULL == frameInCompleteList) {
+        frameInCompleteList = frame;
+        frameInCompleteTail = frame;
+        frameInCompleteList->next = NULL;
+    } else {
+        frameInCompleteTail->next = frame;
+        frameInCompleteTail = frame;
+        frameInCompleteTail->next = NULL;
     }
-    
-    //添加到链表末尾
-    aide = tmp;
-
     pthread_mutex_unlock(&frameInCompleteMutex);
-    log_info("------ addFrameInComplete 释放锁 ------\n");
-//    fflush(stdout);
     return 1;
 }
 
@@ -253,7 +238,7 @@ int frameInCompleteListSize() {
     //log_info("------ frameInCompleteListSize 获取锁 ------\n");
     fflush(stdout);
     struct Frame *tmp;
-    // pthread_mutex_lock(&frameInCompleteMutex);
+    pthread_mutex_lock(&frameInCompleteMutex);
     tmp = frameInCompleteList;
     int count = 0;
     while (tmp != NULL) {
@@ -262,7 +247,7 @@ int frameInCompleteListSize() {
         tmp = tmp->next;
     }
     //printf("------ 2222 ------\n");
-    // pthread_mutex_unlock(&frameInCompleteMutex);
+    pthread_mutex_unlock(&frameInCompleteMutex);
     //printf("------ frameInCompleteListSize 释放锁 ------\n");
     fflush(stdout);
     return count;
@@ -399,16 +384,10 @@ void *task(void *args) {
                    // fflush(stdout);
                     struct Frame *tmp1 = getInCompleteFrameByFrameIndex(tmp->frameIndex);
                     if (tmp1 != NULL && tmp1->frameIndex == tmp->frameIndex) {
-                        //log_info("------ check deleteFrameInComplete 111 ------\n");
-                        //fflush(stdout);
+
                         deleteFrameInComplete(tmp->frameIndex);
-                        //log_info("------ check deleteFrameInComplete 222 ------\n");
                     }
-
-//                    printf("%d 检查完成\n", tmp->frameIndex);
-//                    fflush(stdout);
-                   // log_info("------ check addFrameComplete %d-----\n",tmp->frameIndex);
-
+       
 
                     addFrameComplete(tmp);
 
@@ -432,23 +411,12 @@ void *task(void *args) {
                             addLossPacket(tmp, i);
                         }
                     }
-
-                        //接收的帧不完整，加入frameInComplete链表
-                        //printf("------ check addFrameComplete 111 ------\n");
-                    log_info("帧不完整  添加前 frameInComplete size %d\n", frameInCompleteListSize());
-//                        fflush(stdout);
+                
                         int i = 0;
                         i = addFrameInComplete(tmp);
-                    log_info("帧不完整  添加后 frameInComplete size %d result= %d\n", frameInCompleteListSize(), i);
-//                    fflush(stdout);
-//                    printf("------ check addFrameComplete 222 ------\n");
-//                    fflush(stdout);
-                    log_info("frameIndex %d join frameInComplete list\n", tmp->frameIndex);
-                        //printf("帧不完整  删除前 size %d\n",frameListSize());
+                        log_info("帧不完整  添加 frameInComplete size %d result= %d\n", frameInCompleteListSize(), i);
                         tmp = deleteFrame(tmp);
-                        //printf("帧不完整  删除后 size %d\n",frameListSize());
-                        //pthread_mutex_unlock(&frameMutex);
-                        //fflush(stdout);
+
                 }
 
 //                if (frameList < -1){

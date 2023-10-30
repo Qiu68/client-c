@@ -649,6 +649,8 @@ void *udpListener(void *args) {
                         aFrame->packetSum = 0;
                         addLossPacket(aFrame, 0);
                         beforePacketOrder = nowPacketOrder;
+                    
+                        addFrameInComplete(aFrame);
                     }
                     //log_info("udp 2-222 循环退出");
                     frame = (struct Frame *) malloc(sizeof(struct Frame));

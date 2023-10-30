@@ -72,9 +72,9 @@ int addLossPacketAndCast(int frameIndex, int packageIndex) {
         castTmp = (struct lossPacketList *) malloc(sizeof(struct lossPacketList));
 
         intToBytes(frameIndex, frameIndexArr);
-        arrCopy(frameIndexArr, 0, lossPacketHead->data, 0, 4);
+        arrCopy(frameIndexArr, 0, castTmp->data, 0, 4);
         intToBytes(packageIndex, packageIndexArr);
-        arrCopy(packageIndexArr, 0, lossPacketHead->data, 4, 4);
+        arrCopy(packageIndexArr, 0, castTmp->data, 4, 4);
 
         lossPacketTail->next = castTmp;
         lossPacketTail = castTmp;
@@ -202,9 +202,9 @@ void *retry(void *args) {
             nackReqEncode(data, 1, udpRoutePort, resourceId, count);
             //TODO 发送nack指令
             sendNackReq(data, sizeof(data));
-            printf("------ send nack command ------\n");
-            printf("----- lossPacketCount = %d ------ \n", count);
-            fflush(stdout);
+           log_debug("------ send nack command ------\n");
+            log_debug("----- lossPacketCount = %d ------ \n", count);
+            
             //TODO 释放lossPacketHead内存  lossPacketHead = NULL
             free(lossPacketHead);
             lossPacketHead = NULL;
