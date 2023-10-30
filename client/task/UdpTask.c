@@ -249,9 +249,9 @@ int addPacketByFrame(struct Frame *aFrame, struct framePacket *package) {
     framePacket = package;
      log_info("addPacketByFrame frameIndex = %d packageDatLength = %d",aFrame->frameIndex,framePacket->dataLength);
 
-    nowPacketOrder = framePacket->packageIndex;
+    //nowPacketOrder = framePacket->packageIndex;
 
-    if (nowPacketOrder == 1) {
+    if (framePacket->packageIndex == 1) {
         aFrame->framePosition = framePacket->framePosition;
     }
     struct packetData *data;
@@ -346,49 +346,37 @@ int addLossPacket(struct Frame *aFrame, int i) {
 }
 
 int delLossPacket(struct Frame *framePacket, int packageIndex) {
-    if (framePacket->lossPacketNode == NULL){
+   log_info("frameIndex = %d packageIndex = %d 从丢包链表删除",framePacket->frameIndex,packageIndex);
+
+    struct lossPacket *aide;
+    aide = framePacket->lossPacketNode;
+
+    if (framePacket->lossPacketNode == NULL) {
+        log_error("frameIndex = %d 的丢包链表为空",framePacket->frameIndex);
         return -1;
     }
-    struct Frame *aide;
-    aide = framePacket;
-    log_info("delLossPacket frameIndex = %d packageIndex = %d ",framePacket->frameIndex,packageIndex);
+    
     //移除首节点
-    if (aide->lossPacketNode->id == 0 || aide->lossPacketNode->id == packageIndex) {
+    if (aide->id == packageIndex) {
         //链表只有一个节点的情况
-        if (aide->lossPacketNode->next == NULL) {
-            aide->lossPacketNode = NULL;
+        if (aide->next == NULL) {
+            aide = NULL;
         } else {
-            aide->lossPacketNode = aide->lossPacketNode->next;
+            aide = aide->next;
         }
-
         return 1;
     }
 
-        //移除尾结点
-    else if (aide->lossPacketNode->next == NULL) {
-        //遍历到ptr节点的上一个节点
-        log_info("udp 666 循环开始");
-        while (aide->lossPacketNode->id != packageIndex) {
-            aide->lossPacketNode = aide->lossPacketNode->next;
+    struct lossPacket *prev = framePacket->lossPacketNode;
+    struct lossPacket *curr = prev->next;
+    while(curr != NULL){
+        if (curr->id == packageIndex){
+            prev->next = curr->next;
+            break;
         }
-        log_info("udp 666 循环退出");
-        //断开与ptr的连接
-        aide->lossPacketNode->next = NULL;
+        prev = prev->next;
+        curr = curr->next;
     }
-
-        //中间节点
-    else {
-        log_info("udp 777 循环开始");
-        //遍历到ptr节点的上一个节点
-        while (aide->lossPacketNode->next->id != packageIndex) {
-            aide->lossPacketNode = aide->lossPacketNode->next;
-        }
-        log_info("udp 777 循环退出");
-        struct Frame *tmp;
-        tmp = aide;
-        aide->lossPacketNode->next = tmp->lossPacketNode->next->next;
-    }
-    aide = NULL;
     return 1;
 }
 
@@ -421,13 +409,6 @@ int packetProcess(struct FramePacket *package) {
         delLossPacket(frame, nowPacketOrder);
         addPacket(package);
     }
-
-//    if (packetSumLength(frame) == frame->frameLength) {
-//        printf("111111 add frame %d\n",frame->frameIndex);
-//        fflush(stdout);
-//        addFrame(frame);
-//    }
-
 }
 
 void *udpListener(void *args) {
@@ -440,12 +421,9 @@ void *udpListener(void *args) {
     int bufCount = 0;
 
     while (udpListenerFlag) {
-        //long long s = getTimeStampByUs();
-        //log_info("------ udp 111 ------");
+
         socklen_t len = sizeof(addr);
         int length = recvfrom(udpSockFd, &buf, sizeof(buf), 0, (struct sockaddr *) &addr, &len);
-       // log_info("------ udp 222 ------");
-       //log_info("loop time = %lld",(getTimeStampByUs() - s));
 
         int type = buf[0];
         int rcvPacketCount = 0;
@@ -466,16 +444,15 @@ void *udpListener(void *args) {
             case FRAME: {
                
                 struct FramePacket *framePacket;
-                //packetPtr = (struct Packet *) malloc(sizeof(struct Packet));
+           
 
                 framePacket = FramePacketDecode(buf, length);
                 packetPtr.sendTime = framePacket->sendTime;
                 packetPtr.revTime = getSystemTimestamp() - revTime;
-                //log_info("sendtime = %d rev time = %lld",packetPtr->sendTime,packetPtr->revTime);
-                //packetPtrnext = NULL;
+               
     
                 struct PacketSendTime packetSendTime;
-                 //packetSendTime = (struct PacketSendTime *) malloc(sizeof(struct PacketSendTime));
+    
                  packetSendTime.sendTime = packetPtr.sendTime;
  
                  sendPacketSendTimeMsg(packetSendTimeMsgId,(void *)&packetSendTime,sizeof(struct PacketSendTime ));
@@ -485,11 +462,10 @@ void *udpListener(void *args) {
                     clearTime = framePacket->sendTime;
                 }
 
-                //char packetId[] = framePacket->frameIndex + framePacket->packageIndex +framePacket->sendTime;
 
                 // if(framePacket->packageIndex == 1){
-                    log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  ------\n",
-                         framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength);     
+                    // log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  ------\n",
+                    //      framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength);     
                 // }
 
           
@@ -587,7 +563,6 @@ void *udpListener(void *args) {
                 // log_info("------ frameIndex = %d   packageIndex = %d  frameLength = %-6d  packetCount = %d  ------\n",
                 //          framePacket->frameIndex, framePacket->packageIndex, framePacket->frameLength, packetCount);
 
-               fflush(stdout);
 
                 if (framePacket->frameIndex != beforeFrameIndex) {
                     nowPacketTimestamp = getSystemTimestamp();
@@ -727,12 +702,12 @@ void *udpListener(void *args) {
                     //    lossFrame->frameIndex, lossFrame->frameLength,
                     //    packetSumLength(lossFrame), lossFrame->packetSum);
 
-
                     if (NULL != lossFrame->lossPacketNode) {
 
                         delLossPacket(lossFrame, framePacket->packageIndex);
                     }
-                 
+
+                    
                     addFrame(lossFrame);
             
 

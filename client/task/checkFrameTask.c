@@ -181,6 +181,13 @@ int addFrameInComplete(struct Frame *frame) {
         frameInCompleteTail = frame;
         frameInCompleteList->next = NULL;
     } else {
+        //去重
+        if (frame->frameIndex == frameInCompleteTail->frameIndex)
+        {
+            log_error("frameIndex = %d 重复添加",frame->frameIndex);
+            return -1;
+        }
+        
         frameInCompleteTail->next = frame;
         frameInCompleteTail = frame;
         frameInCompleteTail->next = NULL;
